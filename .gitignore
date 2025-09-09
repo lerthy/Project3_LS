@@ -1,3 +1,24 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+web/node_modules/
+web/lambda/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Terraform
+**/.terraform/**
+*.tfstate
+*.tfstate.*
+crash.log
+.terraform.lock.hcl
+
+# Build artifacts
+infra/lambda.zip
+
 node_modules/
 .env
 .terraform/

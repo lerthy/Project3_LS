@@ -10,7 +10,7 @@ exports.handler = async (event) => {
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       port: 5432,
-      ssl: { rejectUnauthorized: false } // needed if using AWS RDS
+      ssl: { rejectUnauthorized: false }
     });
 
     await client.connect();

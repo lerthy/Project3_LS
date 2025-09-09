@@ -1,0 +1,15 @@
+variable "db_name" {
+  type    = string
+  default = "contacts"
+}
+
+variable "db_username" {
+  type    = string
+  # Choose a non-reserved username; 'admin', 'postgres', etc. are not allowed
+  default = "appuser"
+}
+
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
