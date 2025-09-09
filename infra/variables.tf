@@ -4,12 +4,12 @@ variable "db_name" {
 }
 
 variable "db_username" {
-  type    = string
+  type = string
   # Choose a non-reserved username; 'admin', 'postgres', etc. are not allowed
   default = "appuser"
 }
 
 variable "aws_region" {
   type    = string
-  default = "us-east-1"
+  default = "eu-north-1"
 }

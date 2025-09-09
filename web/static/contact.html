@@ -830,6 +830,13 @@
   <script type="module">
    document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-process]").forEach(e=>{const c=e.querySelectorAll("[data-process-step]"),a=e.querySelectorAll("[data-process-step-details]"),[r]=e.querySelectorAll("[data-process-details]");c.forEach(s=>{s.addEventListener("click",()=>{const l=s.getAttribute("data-process-step");let o=!1;a.forEach(t=>{t.getAttribute("data-process-step-details")===l?(t.classList.remove("d-none"),o=!0):t.classList.add("d-none")}),o&&r?.classList.remove("d-none")})})})});
   </script>
+  
+  <!-- API Configuration -->
+  <script src="js/config.js"></script>
+  
+  <!-- Contact Form Handler -->
+  <script src="js/contact.js" type="module"></script>
+  
  </body>
 </html>
 <script type="module">

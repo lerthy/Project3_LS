@@ -1,0 +1,76 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.21
+    commands:
+      # Install Terraform
+      - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+      - unzip terraform_1.6.0_linux_amd64.zip
+      - mv terraform /usr/local/bin/
+      
+      # Install tflint
+      - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      
+      # Install Go dependencies for tests
+      - cd infra && go mod download
+
+  pre_build:
+    commands:
+      - echo "Running Terraform quality checks..."
+      - cd infra
+      
+      # Terraform formatting check
+      - terraform fmt -check -recursive
+      
+      # Terraform validation
+      - terraform init -backend=false
+      - terraform validate
+      
+      # TFLint
+      - tflint --init
+      - tflint
+
+  build:
+    commands:
+      - echo "Running Terraform tests..."
+      - cd infra
+      
+      # Run unit tests with coverage
+      - go test -v -coverprofile=coverage.out ./tests/
+      - go tool cover -func=coverage.out
+      
+      # Check coverage threshold (60%)
+      - |
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+          echo "Coverage $COVERAGE% is below required 60%"
+          exit 1
+        fi
+        echo "Coverage $COVERAGE% meets requirement"
+
+  post_build:
+    commands:
+      - echo "Running Terraform plan and apply..."
+      - cd infra
+      
+      # Create Lambda deployment package
+      - cd ../web/lambda && zip -r ../../infra/lambda.zip . && cd ../../infra
+      
+      # Terraform plan
+      - terraform plan -out=tfplan
+      
+      # Terraform apply (only if not a PR)
+      - |
+        if [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_CREATED" ] && [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_UPDATED" ]; then
+          terraform apply -auto-approve tfplan
+        else
+          echo "Skipping apply for pull request"
+        fi
+
+artifacts:
+  files:
+    - 'infra/tfplan'
+    - 'infra/coverage.out'
+  name: terraform-artifacts

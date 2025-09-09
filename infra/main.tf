@@ -138,7 +138,7 @@ resource "aws_lambda_function" "contact" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "index.handler"
   runtime          = "nodejs18.x"
-  source_code_hash = filebase64sha256("lambda.zip")
+  source_code_hash = fileexists("lambda.zip") ? filebase64sha256("lambda.zip") : null
 
   environment {
     variables = {
@@ -165,13 +165,34 @@ data "aws_ssm_parameter" "db_password" {
 resource "aws_db_instance" "contact_db" {
   identifier        = "contact-db"
   engine            = "postgres"
-  instance_class    = "db.t3.micro"
-  allocated_storage = 20
-
-  # Prefer provided var.db_username; fallback to SSM if explicitly set and safe
+  engine_version    = "15.7"  # Specific version for predictability
+  instance_class    = "db.t3.micro"  # Free Tier eligible
+  allocated_storage = 20  # Free Tier: 20GB included
+  max_allocated_storage = 20  # Prevent auto-scaling beyond Free Tier
+  
+  # Free Tier optimizations
+  storage_type          = "gp2"  # General Purpose SSD (Free Tier eligible)
+  backup_retention_period = 7   # Free Tier: 7 days included, but let's use minimal
+  backup_window         = "03:00-04:00"  # Non-peak hours
+  maintenance_window    = "sun:04:00-sun:05:00"  # Non-peak hours
+  
+  # Security but Free Tier friendly
+  storage_encrypted     = false  # Encryption might have costs in some scenarios
+  publicly_accessible   = false  # Security best practice
+  deletion_protection   = false  # Allow deletion for cleanup
+  
+  # Database configuration
   username = var.db_username
   password = data.aws_ssm_parameter.db_password.value
   db_name  = var.db_name
 
+  # Important: Skip final snapshot to avoid charges
   skip_final_snapshot = true
+  delete_automated_backups = true  # Clean up backups on deletion
+  
+  tags = {
+    Name = "contact-db-free-tier"
+    Environment = "development"
+    Project = "assignment"
+  }
 }

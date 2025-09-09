@@ -1,0 +1,81 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      # Install dependencies for web frontend
+      - cd web && npm install
+      
+      # Install dependencies for Lambda function
+      - cd lambda && npm install && cd ..
+
+  pre_build:
+    commands:
+      - echo "Running frontend quality checks..."
+      - cd web
+      
+      # ESLint for JavaScript
+      - npm run lint:js
+      
+      # Stylelint for CSS
+      - npm run lint:css
+      
+      # ESLint for Lambda function
+      - cd lambda && npm run lint && cd ..
+
+  build:
+    commands:
+      - echo "Running tests..."
+      - cd web
+      
+      # Frontend tests with coverage
+      - npm run test
+      
+      # Lambda tests with coverage
+      - cd lambda && npm run test && cd ..
+      
+      - echo "Building static site..."
+      # For this project, static files are already built
+      # In a real Vite project, you'd run: npm run build
+
+  post_build:
+    commands:
+      - echo "Deploying to S3 and updating Lambda..."
+      - cd web
+      
+      # Get API Gateway URL from Terraform output (or environment variable)
+      - |
+        if [ -z "$API_GATEWAY_URL" ]; then
+          echo "Warning: API_GATEWAY_URL not set, using placeholder"
+          API_GATEWAY_URL="https://placeholder.execute-api.eu-north-1.amazonaws.com/dev/contact"
+        fi
+      
+      # Replace API URL in config file
+      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" static/js/config.js
+      
+      # Deploy static files to S3
+      - aws s3 sync static/ s3://$S3_BUCKET_NAME --delete
+      
+      # Package and deploy Lambda function
+      - cd lambda
+      - zip -r lambda-deployment.zip .
+      - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip
+      - cd ..
+      
+      # Invalidate CloudFront cache
+      - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
+      
+      - echo "Deployment completed successfully!"
+
+artifacts:
+  files:
+    - 'web/coverage/**/*'
+    - 'web/lambda/coverage/**/*'
+  name: web-artifacts
+
+cache:
+  paths:
+    - 'web/node_modules/**/*'
+    - 'web/lambda/node_modules/**/*'
