@@ -1,4 +1,4 @@
-const { handler } = require('./index');
+import { handler } from './index.js';
 
 jest.mock('pg', () => {
   const connect = jest.fn();

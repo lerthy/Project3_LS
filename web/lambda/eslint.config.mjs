@@ -22,6 +22,8 @@ export default [
   {
     files: ['**/*.test.js'],
     languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: {
         jest: true,
         describe: true,
