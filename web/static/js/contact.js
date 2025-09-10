@@ -80,7 +80,7 @@ class ContactForm {
     const formData = new FormData(this.form);
     
     return {
-      fullName: formData.get('fullName'),
+      name: formData.get('fullName'),
       email: formData.get('email'),
       phone: formData.get('phone'),
       company: formData.get('company'),

@@ -48,7 +48,7 @@ export const handler = async (event) => {
     }
 
     // Validate required fields
-    const requiredFields = ['fullName', 'email', 'phone', 'company', 'jobTitle', 'country', 'city', 'message'];
+    const requiredFields = ['name', 'email', 'phone', 'company', 'jobTitle', 'country', 'city', 'message'];
     const missingFields = requiredFields.filter(field => !body[field] || body[field].trim() === '');
     
     if (missingFields.length > 0) {
@@ -108,13 +108,13 @@ export const handler = async (event) => {
     // Insert contact data
     const query = `
       INSERT INTO contacts
-      (full_name, email, phone, company, job_title, country, city, message)
+      (name, email, phone, company, job_title, country, city, message)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING id, created_at;
     `;
 
     const values = [
-      body.fullName.trim(),
+      body.name.trim(),
       body.email.trim().toLowerCase(),
       body.phone.trim(),
       body.company.trim(),
