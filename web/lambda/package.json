@@ -2,9 +2,10 @@
   "name": "lambda",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint . --ignore-pattern eslint.config.js",
+    "lint": "eslint .",
     "test": "jest --coverage"
   },
   "keywords": [],
