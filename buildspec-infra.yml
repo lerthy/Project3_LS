@@ -21,6 +21,7 @@ phases:
       - echo "Running Terraform quality checks..."
       
       # Terraform formatting check
+      - terraform -chdir=infra fmt -recursive
       - terraform -chdir=infra fmt -check -recursive
       
       # Terraform validation
