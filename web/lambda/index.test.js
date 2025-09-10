@@ -18,7 +18,7 @@ jest.mock('pg', () => {
 });
 
 const baseBody = {
-  fullName: 'Jane Doe',
+  name: 'Jane Doe',
   email: 'jane@example.com',
   phone: '123',
   company: 'Acme',
