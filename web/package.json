@@ -2,6 +2,7 @@
   "name": "polymath-website",
   "version": "1.0.0",
   "description": "Polymath Services website with contact form",
+  "type": "module",
   "main": "static/index.html",
   "scripts": {
     "lint:js": "eslint static/**/*.js",
