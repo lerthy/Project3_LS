@@ -132,7 +132,7 @@ resource "aws_api_gateway_method" "post_contact" {
   authorization = "NONE"
 }
 
-// GET method was temporary for verification; removed for security
+# GET method was temporary for verification; removed for security
 
 # Add OPTIONS method for CORS preflight
 resource "aws_api_gateway_method" "options_contact" {
@@ -151,7 +151,7 @@ resource "aws_api_gateway_integration" "lambda_integration" {
   uri                     = aws_lambda_function.contact.invoke_arn
 }
 
-// Removed GET integration
+# Removed GET integration
 
 # Integrate OPTIONS to Lambda as well (Lambda returns CORS headers)
 resource "aws_api_gateway_integration" "lambda_integration_options" {

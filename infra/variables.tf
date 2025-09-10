@@ -1,24 +1,26 @@
 variable "db_name" {
-  type    = string
-  default = "contacts"
+  description = "Postgres database name to create/use"
+  type        = string
+  default     = "contacts"
 }
 
 variable "db_username" {
-  type = string
-  # Choose a non-reserved username; 'admin', 'postgres', etc. are not allowed
-  default = "appuser"
+  description = "Database username. Avoid reserved names like 'postgres' or 'admin'"
+  type        = string
+  default     = "appuser"
 }
 
 variable "db_password" {
-  type      = string
-  sensitive = true
-  # When empty, password will be read from SSM parameter defined by var.db_password_ssm_name
-  default   = ""
+  description = "Database password. If empty, read from SSM at db_password_ssm_name"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "aws_region" {
-  type    = string
-  default = "eu-north-1"
+  description = "AWS region to deploy resources into"
+  type        = string
+  default     = "eu-north-1"
 }
 
 # SSM parameter names for DB credentials (used when corresponding var is empty)
