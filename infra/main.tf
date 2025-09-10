@@ -347,7 +347,7 @@ data "aws_vpc" "default" {
 
 # Public inbound for PostgreSQL (demo only)
 resource "aws_security_group" "rds_public" {
-  name        = "rds-public-ingress-5432"
+  name_prefix = "rds-public-ingress-5432-"
   description = "Allow public inbound to Postgres (demo)"
   vpc_id      = data.aws_vpc.default.id
 
