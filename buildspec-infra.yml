@@ -14,32 +14,30 @@ phases:
       - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
       
       # Install Go dependencies for tests
-      - cd infra && go mod download
+      - go -C infra mod download
 
   pre_build:
     commands:
       - echo "Running Terraform quality checks..."
-      - cd infra
       
       # Terraform formatting check
-      - terraform fmt -check -recursive
+      - terraform -chdir=infra fmt -check -recursive
       
       # Terraform validation
-      - terraform init -backend=false
-      - terraform validate
+      - terraform -chdir=infra init -backend=false
+      - terraform -chdir=infra validate
       
       # TFLint
-      - tflint --init
-      - tflint
+      - (cd infra && tflint --init)
+      - (cd infra && tflint)
 
   build:
     commands:
       - echo "Running Terraform tests..."
-      - cd infra
       
       # Run unit tests with coverage
-      - go test -v -coverprofile=coverage.out ./tests/
-      - go tool cover -func=coverage.out
+      - go -C infra test -v -coverprofile=coverage.out ./tests/
+      - go -C infra tool cover -func=coverage.out
       
       # Check coverage threshold (60%)
       - |
@@ -53,18 +51,17 @@ phases:
   post_build:
     commands:
       - echo "Running Terraform plan and apply..."
-      - cd infra
       
       # Create Lambda deployment package
-      - cd ../web/lambda && zip -r ../../infra/lambda.zip . && cd ../../infra
+      - (cd web/lambda && zip -r ../../infra/lambda.zip .)
       
       # Terraform plan
-      - terraform plan -out=tfplan
+      - terraform -chdir=infra plan -out=tfplan
       
       # Terraform apply (only if not a PR)
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_CREATED" ] && [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_UPDATED" ]; then
-          terraform apply -auto-approve tfplan
+          terraform -chdir=infra apply -auto-approve tfplan
         else
           echo "Skipping apply for pull request"
         fi
