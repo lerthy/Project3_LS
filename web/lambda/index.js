@@ -82,7 +82,9 @@ export const handler = async (event) => {
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       port: 5432,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+      query_timeout: 5000
     });
 
     await client.connect();
