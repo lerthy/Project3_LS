@@ -7,13 +7,10 @@ export default [
     files: ['**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
-      sourceType: 'script',
+      sourceType: 'module',
       globals: {
-        module: true,
-        require: true,
         process: true,
-        console: true,
-        exports: true
+        console: true
       }
     },
     ignores: ['node_modules/**', 'coverage/**'],
@@ -25,6 +22,8 @@ export default [
   {
     files: ['**/*.test.js'],
     languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: {
         jest: true,
         describe: true,

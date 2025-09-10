@@ -1,7 +1,7 @@
 // Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
-const { Client } = require("pg");
+import { Client } from "pg";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   // CORS headers for all responses
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -82,7 +82,9 @@ exports.handler = async (event) => {
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       port: 5432,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+      query_timeout: 5000
     });
 
     await client.connect();
