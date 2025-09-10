@@ -2,6 +2,7 @@ resource "random_id" "rand" {
   byte_length = 4
 }
 
+# Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
 # S3 Bucket for Website
 # -------------------
@@ -143,8 +144,8 @@ resource "aws_lambda_function" "contact" {
   environment {
     variables = {
       DB_HOST = aws_db_instance.contact_db.address
-      DB_USER = data.aws_ssm_parameter.db_username.value
-      DB_PASS = data.aws_ssm_parameter.db_password.value
+      DB_USER = var.db_username
+      DB_PASS = var.db_password
       DB_NAME = var.db_name
     }
   }
@@ -153,17 +154,8 @@ resource "aws_lambda_function" "contact" {
 # -------------------
 # RDS Database
 # -------------------
-data "aws_ssm_parameter" "db_username" {
-  name = "/contact/db_username"
-}
-
-data "aws_ssm_parameter" "db_password" {
-  name            = "/contact/db_password"
-  with_decryption = true
-}
-
 resource "aws_db_instance" "contact_db" {
-  identifier        = "contact-db"
+  identifier        = "contact-db-${random_id.rand.hex}"
   engine            = "postgres"
   engine_version    = "15.7"  # Specific version for predictability
   instance_class    = "db.t3.micro"  # Free Tier eligible
@@ -183,7 +175,7 @@ resource "aws_db_instance" "contact_db" {
   
   # Database configuration
   username = var.db_username
-  password = data.aws_ssm_parameter.db_password.value
+  password = var.db_password
   db_name  = var.db_name
 
   # Important: Skip final snapshot to avoid charges

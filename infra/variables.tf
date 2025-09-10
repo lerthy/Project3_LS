@@ -9,6 +9,11 @@ variable "db_username" {
   default = "appuser"
 }
 
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "aws_region" {
   type    = string
   default = "eu-north-1"

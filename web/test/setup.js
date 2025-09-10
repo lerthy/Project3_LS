@@ -13,3 +13,9 @@ afterEach(() => {
   // Clean up DOM after each test
   document.body.innerHTML = '';
 });
+
+// JSDOM polyfills
+if (!Element.prototype.scrollIntoView) {
+  // eslint-disable-next-line no-extend-native
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}

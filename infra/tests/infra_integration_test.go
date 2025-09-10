@@ -5,6 +5,7 @@ import (
 
     "github.com/gruntwork-io/terratest/modules/terraform"
     "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 func TestInfra(t *testing.T) {
@@ -12,6 +13,9 @@ func TestInfra(t *testing.T) {
 
     opts := &terraform.Options{
         TerraformDir: "../",
+        Vars: map[string]interface{}{
+            "db_password": "TestPassw0rd!",
+        },
     }
 
     defer terraform.Destroy(t, opts)
@@ -22,8 +26,13 @@ func TestInfra(t *testing.T) {
     apiGateway := terraform.Output(t, opts, "api_gateway_url")
     rdsEndpoint := terraform.Output(t, opts, "rds_endpoint")
 
-    assert.NotEmpty(t, bucketName)
-    assert.NotEmpty(t, cloudfrontURL)
-    assert.Contains(t, apiGateway, "execute-api")
-    assert.Contains(t, rdsEndpoint, "rds.amazonaws.com")
+    t.Logf("bucket_name=%s", bucketName)
+    t.Logf("cloudfront_url=%s", cloudfrontURL)
+    t.Logf("api_gateway_url=%s", apiGateway)
+    t.Logf("rds_endpoint=%s", rdsEndpoint)
+
+    require.NotEmpty(t, bucketName, "bucket_name output is empty")
+    require.NotEmpty(t, cloudfrontURL, "cloudfront_url output is empty")
+    assert.Contains(t, apiGateway, "execute-api", "api_gateway_url does not look like an API Gateway URL")
+    assert.Contains(t, rdsEndpoint, "rds.amazonaws.com", "rds_endpoint does not look like an RDS endpoint")
 }

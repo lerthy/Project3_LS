@@ -1,5 +1,11 @@
 {
   "extends": ["stylelint-config-standard"],
+  "ignoreFiles": [
+    "coverage/**",
+    "node_modules/**",
+    "static/assets/**",
+    "static/style.css"
+  ],
   "rules": {
     "indentation": 2,
     "string-quotes": "double",
@@ -19,7 +25,7 @@
     "font-family-name-quotes": "always-where-recommended",
     "comment-whitespace-inside": "always",
     "comment-empty-line-before": "always",
-    "at-rule-no-unknown": true,
+    "at-rule-no-unknown": [true, { "ignoreAtRules": ["tailwind", "apply"] }],
     "selector-pseudo-class-no-unknown": true,
     "selector-pseudo-element-no-unknown": true,
     "selector-type-no-unknown": true,
@@ -27,9 +33,5 @@
     "at-rule-empty-line-before": "always",
     "rule-empty-line-before": "always",
     "selector-list-comma-newline-after": "always"
-  },
-  "ignoreFiles": [
-    "node_modules/**/*",
-    "assets/**/*"
-  ]
+  }
 }
