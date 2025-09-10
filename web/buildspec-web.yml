@@ -58,7 +58,7 @@ phases:
       # Package and deploy Lambda function
       - cd web/lambda
       - zip -r lambda-deployment.zip .
-      - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip
+      - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
       - cd -
       
       # Invalidate CloudFront cache
