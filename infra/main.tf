@@ -332,7 +332,8 @@ resource "aws_security_group" "rds_public" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["95.86.58.11/32"]
+    # Demo-only: allow public access so Lambda (not in VPC) can reach RDS
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
