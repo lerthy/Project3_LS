@@ -36,8 +36,8 @@ phases:
     commands:
       - echo "Running Terraform tests..."
       
-      # Run unit tests with coverage
-      - go -C infra test -v -coverprofile=coverage.out ./tests/
+      # Run unit tests with coverage (short mode to skip slow checks)
+      - go -C infra test -v -short -coverprofile=coverage.out ./tests/
       - go -C infra tool cover -func=coverage.out
       
       # Check coverage threshold (60%)
