@@ -1,7 +1,7 @@
 // Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
-const { Client } = require("pg");
+import { Client } from "pg";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   // CORS headers for all responses
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
