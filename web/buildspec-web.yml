@@ -6,35 +6,33 @@ phases:
       nodejs: 18
     commands:
       # Install dependencies for web frontend
-      - cd web && npm install
+      - npm --prefix web ci || npm --prefix web install
       
       # Install dependencies for Lambda function
-      - cd lambda && npm install && cd ..
+      - npm --prefix web/lambda ci || npm --prefix web/lambda install
 
   pre_build:
     commands:
       - echo "Running frontend quality checks..."
-      - cd web
       
       # ESLint for JavaScript
-      - npm run lint:js
+      - npm --prefix web run lint:js
       
       # Stylelint for CSS
-      - npm run lint:css
+      - npm --prefix web run lint:css
       
       # ESLint for Lambda function
-      - cd lambda && npm run lint && cd ..
+      - npm --prefix web/lambda run lint
 
   build:
     commands:
       - echo "Running tests..."
-      - cd web
       
       # Frontend tests with coverage
-      - npm run test
+      - npm --prefix web run test
       
       # Lambda tests with coverage
-      - cd lambda && npm run test && cd ..
+      - npm --prefix web/lambda run test
       
       - echo "Building static site..."
       # For this project, static files are already built
@@ -43,7 +41,6 @@ phases:
   post_build:
     commands:
       - echo "Deploying to S3 and updating Lambda..."
-      - cd web
       
       # Get API Gateway URL from Terraform output (or environment variable)
       - |
@@ -53,16 +50,16 @@ phases:
         fi
       
       # Replace API URL in config file
-      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" static/js/config.js
+      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
       
       # Deploy static files to S3
-      - aws s3 sync static/ s3://$S3_BUCKET_NAME --delete
+      - aws s3 sync web/static/ s3://$S3_BUCKET_NAME --delete
       
       # Package and deploy Lambda function
-      - cd lambda
+      - cd web/lambda
       - zip -r lambda-deployment.zip .
       - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip
-      - cd ..
+      - cd -
       
       # Invalidate CloudFront cache
       - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
