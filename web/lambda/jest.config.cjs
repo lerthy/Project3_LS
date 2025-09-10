@@ -1,3 +1,4 @@
+// Jest config in CommonJS to work with package.json type=module
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
@@ -7,4 +8,3 @@ module.exports = {
   },
   coverageReporters: ['text', 'json', 'html']
 };
-
