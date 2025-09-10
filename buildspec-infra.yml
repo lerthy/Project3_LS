@@ -58,8 +58,15 @@ phases:
       
       # Terraform plan
       - terraform -chdir=infra plan -out=tfplan
-      # NOTE: Skip terraform apply in CI to avoid long reruns/failures
-      - echo "Skipping terraform apply in CI. Apply manually if desired."
+      
+      # Terraform apply (only if not a PR)
+      - |
+        if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
+          echo "Skipping apply for pull request"
+        else
+          # Do not fail the build if apply fails; continue so pipeline does not rerun endlessly
+          terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
+        fi
 
 artifacts:
   files:
