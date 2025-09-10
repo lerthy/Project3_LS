@@ -42,14 +42,17 @@ phases:
     commands:
       - echo "Deploying to S3 and updating Lambda..."
       
-      # Get API Gateway URL from SSM Parameter Store
+      # Get API Gateway URL dynamically
       - |
-        API_GATEWAY_URL=$(aws ssm get-parameter --name "/project3/api-gateway-url" --query 'Parameter.Value' --output text)
-        if [ -z "$API_GATEWAY_URL" ]; then
-          echo "Warning: Could not get API_GATEWAY_URL from SSM, using fallback"
-          API_GATEWAY_URL="https://sfexvebp8h.execute-api.eu-north-1.amazonaws.com/dev/contact"
+        echo "Fetching API Gateway URL..."
+        API_GATEWAY_URL=$(aws apigateway get-rest-apis --query 'items[?name==`contact-api`].id' --output text)
+        if [ -n "$API_GATEWAY_URL" ]; then
+          API_GATEWAY_URL="https://${API_GATEWAY_URL}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/dev/contact"
+          echo "Using dynamically discovered API Gateway URL: $API_GATEWAY_URL"
+        else
+          echo "Error: Could not find contact-api REST API"
+          exit 1
         fi
-        echo "Using API Gateway URL: $API_GATEWAY_URL"
       
       # Replace API URL in config file
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
