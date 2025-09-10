@@ -42,12 +42,14 @@ phases:
     commands:
       - echo "Deploying to S3 and updating Lambda..."
       
-      # Get API Gateway URL from Terraform output (or environment variable)
+      # Get API Gateway URL from SSM Parameter Store
       - |
+        API_GATEWAY_URL=$(aws ssm get-parameter --name "/project3/api-gateway-url" --query 'Parameter.Value' --output text)
         if [ -z "$API_GATEWAY_URL" ]; then
-          echo "Warning: API_GATEWAY_URL not set, using placeholder"
-          API_GATEWAY_URL="https://placeholder.execute-api.eu-north-1.amazonaws.com/dev/contact"
+          echo "Warning: Could not get API_GATEWAY_URL from SSM, using fallback"
+          API_GATEWAY_URL="https://sfexvebp8h.execute-api.eu-north-1.amazonaws.com/dev/contact"
         fi
+        echo "Using API Gateway URL: $API_GATEWAY_URL"
       
       # Replace API URL in config file
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
