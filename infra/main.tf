@@ -485,7 +485,7 @@ resource "aws_codepipeline" "infra_pipeline" {
       version          = "1"
 
       configuration = {
-        ProjectName = aws_codebuild_project.infra_project.name
+        ProjectName = "project3-infra-build"
       }
     }
   }
@@ -535,7 +535,7 @@ resource "aws_codepipeline" "web_pipeline" {
       version          = "1"
 
       configuration = {
-        ProjectName = aws_codebuild_project.web_project.name
+        ProjectName = "project3-web-build"
       }
     }
   }
