@@ -2,13 +2,11 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.js'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
+  transform: {
+    '^.+\\.js$': ['babel-jest', {
+      presets: [['@babel/preset-env', { targets: { node: 'current' } }]]
+    }]
   },
-  transform: {},
   collectCoverage: true,
   coverageThreshold: {
     global: { branches: 70, functions: 70, lines: 70, statements: 70 }
