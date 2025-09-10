@@ -224,6 +224,29 @@ resource "aws_api_gateway_stage" "contact_stage" {
   stage_name    = "dev"
 }
 
+# Ensure CORS headers are present on API Gateway default error responses (4XX/5XX)
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
+  response_type = "DEFAULT_4XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Origin'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_5xx" {
+  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
+  response_type = "DEFAULT_5XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Origin'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
+  }
+}
+
 # -------------------
 # IAM Role for Lambda
 # -------------------
