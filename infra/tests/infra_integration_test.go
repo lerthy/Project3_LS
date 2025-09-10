@@ -1,6 +1,7 @@
 package tests
 
 import (
+    "os"
     "testing"
 
     "github.com/gruntwork-io/terratest/modules/terraform"
@@ -10,6 +11,10 @@ import (
 
 func TestInfra(t *testing.T) {
     t.Parallel()
+
+    if os.Getenv("CI_SKIP_TERRATEST") == "1" {
+        t.Skip("Skipping Terratest in CI (CI_SKIP_TERRATEST=1)")
+    }
 
     opts := &terraform.Options{
         TerraformDir: "../",
