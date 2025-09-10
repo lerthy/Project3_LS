@@ -60,7 +60,7 @@ phases:
       - mkdir -p deployment
       - cp index.js package.json deployment/
       - cd deployment
-      - npm ci --only=production --no-optional
+      - npm ci --omit=dev
       - zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store*" "*node_modules/.cache*"
       - cd ..
       - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
