@@ -41,3 +41,10 @@ variable "db_name_ssm_name" {
   type        = string
   default     = "/project3/db/name"
 }
+
+variable "github_token" {
+  description = "GitHub personal access token for CodePipeline source integration"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

@@ -16,6 +16,11 @@ data "aws_ssm_parameter" "db_name" {
   name = var.db_name_ssm_name
 }
 
+data "aws_ssm_parameter" "github_token" {
+  name = "/project3/github/token"
+  with_decryption = true
+}
+
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
 # S3 Bucket for Website
@@ -365,5 +370,173 @@ resource "aws_security_group" "rds_public" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+# -------------------
+# S3 Bucket for CodePipeline Artifacts
+# -------------------
+resource "aws_s3_bucket" "codepipeline_artifacts" {
+  bucket        = "codepipeline-artifacts-${random_id.rand.hex}"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" {
+  bucket = aws_s3_bucket.codepipeline_artifacts.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# -------------------
+# IAM Role for CodePipeline
+# -------------------
+resource "aws_iam_role" "codepipeline_role" {
+  name = "codepipeline-role-${random_id.rand.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "codepipeline_policy" {
+  name = "codepipeline-policy"
+  role = aws_iam_role.codepipeline_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketVersioning",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = [
+          aws_s3_bucket.codepipeline_artifacts.arn,
+          "${aws_s3_bucket.codepipeline_artifacts.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codebuild:BatchGetBuilds",
+          "codebuild:StartBuild"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# -------------------
+# Infrastructure Pipeline (Terraform)
+# -------------------
+resource "aws_codepipeline" "infra_pipeline" {
+  name     = "project3-infra-pipeline"
+  role_arn = aws_iam_role.codepipeline_role.arn
+
+  artifact_store {
+    location = aws_s3_bucket.codepipeline_artifacts.bucket
+    type     = "S3"
+  }
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "ThirdParty"
+      provider         = "GitHub"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        Owner      = "lerthy"
+        Repo       = "Project3_LS"
+        Branch     = "develop"
+        OAuthToken = data.aws_ssm_parameter.github_token.value
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.infra_project.name
+      }
+    }
+  }
+}
+
+# -------------------
+# Web Application Pipeline
+# -------------------
+resource "aws_codepipeline" "web_pipeline" {
+  name     = "project3-web-pipeline"
+  role_arn = aws_iam_role.codepipeline_role.arn
+
+  artifact_store {
+    location = aws_s3_bucket.codepipeline_artifacts.bucket
+    type     = "S3"
+  }
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "ThirdParty"
+      provider         = "GitHub"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        Owner      = "lerthy"
+        Repo       = "Project3_LS"
+        Branch     = "develop"
+        OAuthToken = data.aws_ssm_parameter.github_token.value
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.web_project.name
+      }
+    }
   }
 }
