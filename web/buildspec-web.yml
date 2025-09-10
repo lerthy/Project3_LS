@@ -6,33 +6,33 @@ phases:
       nodejs: 18
     commands:
       # Install dependencies for web frontend
-      - npm --prefix web ci || npm --prefix web install
+      - npm ci || npm install
       
       # Install dependencies for Lambda function
-      - npm --prefix web/lambda ci || npm --prefix web/lambda install
+      - npm --prefix lambda ci || npm --prefix lambda install
 
   pre_build:
     commands:
       - echo "Running frontend quality checks..."
       
       # ESLint for JavaScript
-      - npm --prefix web run lint:js
+      - npm run lint:js
       
       # Stylelint for CSS
-      - npm --prefix web run lint:css
+      - npm run lint:css
       
       # ESLint for Lambda function
-      - npm --prefix web/lambda run lint
+      - npm --prefix lambda run lint
 
   build:
     commands:
       - echo "Running tests..."
       
       # Frontend tests with coverage
-      - npm --prefix web run test
+      - npm run test
       
       # Lambda tests with coverage
-      - npm --prefix web/lambda run test
+      - npm --prefix lambda run test
       
       - echo "Building static site..."
       # For this project, static files are already built
@@ -50,16 +50,16 @@ phases:
         fi
       
       # Replace API URL in config file
-      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
+      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" static/js/config.js
       
       # Deploy static files to S3
-      - aws s3 sync web/static/ s3://$S3_BUCKET_NAME --delete
+      - aws s3 sync static/ s3://$S3_BUCKET --delete
       
       # Package and deploy Lambda function
-      - cd web/lambda
+      - cd lambda
       - zip -r lambda-deployment.zip .
       - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
-      - cd -
+      - cd ..
       
       # Invalidate CloudFront cache
       - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
@@ -68,11 +68,11 @@ phases:
 
 artifacts:
   files:
-    - 'web/coverage/**/*'
-    - 'web/lambda/coverage/**/*'
+    - 'coverage/**/*'
+    - 'lambda/coverage/**/*'
   name: web-artifacts
 
 cache:
   paths:
-    - 'web/node_modules/**/*'
-    - 'web/lambda/node_modules/**/*'
+    - 'node_modules/**/*'
+    - 'lambda/node_modules/**/*'
