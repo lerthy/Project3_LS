@@ -20,7 +20,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Only allow POST requests
+    // Only allow POST requests for writes
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     let body;
     try {
       body = JSON.parse(event.body || '{}');
-    } catch (parseError) {
+    } catch {
       return {
         statusCode: 400,
         headers: corsHeaders,

@@ -2,6 +2,20 @@ resource "random_id" "rand" {
   byte_length = 4
 }
 
+# SSM parameters for DB credentials (read-only)
+data "aws_ssm_parameter" "db_username" {
+  name = var.db_username_ssm_name
+}
+
+data "aws_ssm_parameter" "db_password" {
+  name = var.db_password_ssm_name
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "db_name" {
+  name = var.db_name_ssm_name
+}
+
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
 # S3 Bucket for Website
@@ -22,6 +36,34 @@ resource "aws_s3_bucket_website_configuration" "website" {
   error_document {
     key = "index.html"
   }
+}
+
+# Allow public website access for static hosting
+resource "aws_s3_bucket_public_access_block" "website_public_access" {
+  bucket                  = aws_s3_bucket.website.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "website_public_read" {
+  bucket = aws_s3_bucket.website.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject",
+        Effect    = "Allow",
+        Principal = "*",
+        Action    = ["s3:GetObject"],
+        Resource  = [
+          "${aws_s3_bucket.website.arn}/*"
+        ]
+      }
+    ]
+  })
+  depends_on = [aws_s3_bucket_public_access_block.website_public_access]
 }
 
 # -------------------
@@ -90,6 +132,16 @@ resource "aws_api_gateway_method" "post_contact" {
   authorization = "NONE"
 }
 
+// GET method was temporary for verification; removed for security
+
+# Add OPTIONS method for CORS preflight
+resource "aws_api_gateway_method" "options_contact" {
+  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
+  resource_id   = aws_api_gateway_resource.contact_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
 resource "aws_api_gateway_integration" "lambda_integration" {
   rest_api_id             = aws_api_gateway_rest_api.contact_api.id
   resource_id             = aws_api_gateway_resource.contact_resource.id
@@ -99,9 +151,71 @@ resource "aws_api_gateway_integration" "lambda_integration" {
   uri                     = aws_lambda_function.contact.invoke_arn
 }
 
+// Removed GET integration
+
+# Integrate OPTIONS to Lambda as well (Lambda returns CORS headers)
+resource "aws_api_gateway_integration" "lambda_integration_options" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.options_contact.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({ statusCode = 200 })
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_200" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.options_contact.http_method
+  status_code = "200"
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_200" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.options_contact.http_method
+  status_code = aws_api_gateway_method_response.options_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'",
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Origin'",
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
+  }
+
+  response_templates = {
+    "application/json" = ""
+  }
+}
+
 resource "aws_api_gateway_deployment" "contact_deployment" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
-  depends_on  = [aws_api_gateway_integration.lambda_integration]
+  depends_on  = [
+    aws_api_gateway_integration.lambda_integration,
+    aws_api_gateway_integration.lambda_integration_options,
+    aws_api_gateway_method_response.options_200,
+    aws_api_gateway_integration_response.options_200
+  ]
+
+  # Force a new deployment when integrations/methods change
+  triggers = {
+    redeploy = timestamp()
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_api_gateway_stage" "contact_stage" {
@@ -139,17 +253,29 @@ resource "aws_lambda_function" "contact" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "index.handler"
   runtime          = "nodejs18.x"
+  timeout          = 10
   source_code_hash = fileexists("lambda.zip") ? filebase64sha256("lambda.zip") : null
 
   environment {
     variables = {
       DB_HOST = aws_db_instance.contact_db.address
-      DB_USER = var.db_username
-      DB_PASS = var.db_password
-      DB_NAME = var.db_name
+      DB_USER = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+      DB_PASS = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+      DB_NAME = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
     }
   }
 }
+
+# Allow API Gateway to invoke the Lambda function
+resource "aws_lambda_permission" "apigw_invoke" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.contact.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.contact_api.id}/*/*/contact"
+}
+
+data "aws_caller_identity" "current" {}
 
 # -------------------
 # RDS Database
@@ -170,13 +296,15 @@ resource "aws_db_instance" "contact_db" {
   
   # Security but Free Tier friendly
   storage_encrypted     = false  # Encryption might have costs in some scenarios
-  publicly_accessible   = false  # Security best practice
+  publicly_accessible   = true   # For demo connectivity from Lambda (no VPC)
   deletion_protection   = false  # Allow deletion for cleanup
   
   # Database configuration
-  username = var.db_username
-  password = var.db_password
-  db_name  = var.db_name
+  username = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+  password = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+  db_name  = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+
+  vpc_security_group_ids = [aws_security_group.rds_public.id]
 
   # Important: Skip final snapshot to avoid charges
   skip_final_snapshot = true
@@ -186,5 +314,32 @@ resource "aws_db_instance" "contact_db" {
     Name = "contact-db-free-tier"
     Environment = "development"
     Project = "assignment"
+  }
+}
+
+# Default VPC to host RDS security group
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Public inbound for PostgreSQL (demo only)
+resource "aws_security_group" "rds_public" {
+  name        = "rds-public-ingress-5432"
+  description = "Allow public inbound to Postgres (demo)"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["95.86.58.11/32"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 }

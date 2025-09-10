@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint . --ignore-pattern eslint.config.js",
     "test": "jest --coverage"
   },
   "keywords": [],
