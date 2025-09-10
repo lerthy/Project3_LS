@@ -93,7 +93,7 @@ export const handler = async (event) => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS contacts (
         id SERIAL PRIMARY KEY,
-        full_name VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(50) NOT NULL,
         company VARCHAR(255) NOT NULL,
