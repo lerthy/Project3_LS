@@ -55,9 +55,14 @@ phases:
       # Deploy static files to S3
       - aws s3 sync static/ s3://$S3_BUCKET --delete
       
-      # Package and deploy Lambda function
+      # Package and deploy Lambda function (exclude node_modules from zip)
       - cd lambda
-      - zip -r lambda-deployment.zip .
+      - mkdir -p lambda-package
+      - cp index.js package.json lambda-package/
+      - cd lambda-package
+      - npm ci --production --omit=dev
+      - zip -r ../lambda-deployment.zip .
+      - cd ..
       - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
       - cd ..
       
