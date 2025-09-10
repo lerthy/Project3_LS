@@ -23,16 +23,19 @@ variable "aws_region" {
 
 # SSM parameter names for DB credentials (used when corresponding var is empty)
 variable "db_username_ssm_name" {
-  type    = string
-  default = "/project3/db/username"
+  description = "SSM parameter name that stores the database username"
+  type        = string
+  default     = "/project3/db/username"
 }
 
 variable "db_password_ssm_name" {
-  type    = string
-  default = "/project3/db/password"
+  description = "SSM parameter name that stores the database password (SecureString)"
+  type        = string
+  default     = "/project3/db/password"
 }
 
 variable "db_name_ssm_name" {
-  type    = string
-  default = "/project3/db/name"
+  description = "SSM parameter name that stores the Postgres database name"
+  type        = string
+  default     = "/project3/db/name"
 }
