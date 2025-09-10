@@ -24,15 +24,21 @@ func TestInfra(t *testing.T) {
     bucketName := terraform.Output(t, opts, "bucket_name")
     cloudfrontURL := terraform.Output(t, opts, "cloudfront_url")
     apiGateway := terraform.Output(t, opts, "api_gateway_url")
-    rdsEndpoint := terraform.Output(t, opts, "rds_endpoint")
-
     t.Logf("bucket_name=%s", bucketName)
     t.Logf("cloudfront_url=%s", cloudfrontURL)
     t.Logf("api_gateway_url=%s", apiGateway)
-    t.Logf("rds_endpoint=%s", rdsEndpoint)
 
     require.NotEmpty(t, bucketName, "bucket_name output is empty")
     require.NotEmpty(t, cloudfrontURL, "cloudfront_url output is empty")
     assert.Contains(t, apiGateway, "execute-api", "api_gateway_url does not look like an API Gateway URL")
+
+    // Skip slower RDS checks when running with -short
+    if testing.Short() {
+        t.Log("skipping RDS endpoint check with -short flag")
+        return
+    }
+
+    rdsEndpoint := terraform.Output(t, opts, "rds_endpoint")
+    t.Logf("rds_endpoint=%s", rdsEndpoint)
     assert.Contains(t, rdsEndpoint, "rds.amazonaws.com", "rds_endpoint does not look like an RDS endpoint")
 }
