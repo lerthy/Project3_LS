@@ -1,0 +1,78 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      # Install dependencies for web frontend
+      - npm --prefix web ci || npm --prefix web install
+      
+      # Install dependencies for Lambda function
+      - npm --prefix web/lambda ci || npm --prefix web/lambda install
+
+  pre_build:
+    commands:
+      - echo "Running frontend quality checks..."
+      
+      # ESLint for JavaScript
+      - npm --prefix web run lint:js
+      
+      # Stylelint for CSS
+      - npm --prefix web run lint:css
+      
+      # ESLint for Lambda function
+      - npm --prefix web/lambda run lint
+
+  build:
+    commands:
+      - echo "Running tests..."
+      
+      # Frontend tests with coverage
+      - npm --prefix web run test
+      
+      # Lambda tests with coverage
+      - npm --prefix web/lambda run test
+      
+      - echo "Building static site..."
+      # For this project, static files are already built
+      # In a real Vite project, you'd run: npm run build
+
+  post_build:
+    commands:
+      - echo "Deploying to S3 and updating Lambda..."
+      
+      # Get API Gateway URL from Terraform output (or environment variable)
+      - |
+        if [ -z "$API_GATEWAY_URL" ]; then
+          echo "Warning: API_GATEWAY_URL not set, using placeholder"
+          API_GATEWAY_URL="https://placeholder.execute-api.eu-north-1.amazonaws.com/dev/contact"
+        fi
+      
+      # Replace API URL in config file
+      - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
+      
+      # Deploy static files to S3
+      - aws s3 sync web/static/ s3://$S3_BUCKET --delete
+      
+      # Package and deploy Lambda function
+      - cd web/lambda
+      - zip -r lambda-deployment.zip .
+      - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
+      - cd ../..
+      
+      # Invalidate CloudFront cache
+      - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
+      
+      - echo "Deployment completed successfully!"
+
+artifacts:
+  files:
+    - 'web/coverage/**/*'
+    - 'web/lambda/coverage/**/*'
+  name: web-artifacts
+
+cache:
+  paths:
+    - 'web/node_modules/**/*'
+    - 'web/lambda/node_modules/**/*'
