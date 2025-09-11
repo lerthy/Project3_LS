@@ -30,7 +30,7 @@ output "api_gateway_url" {
 
 output "lambda_function_name" {
   description = "Name of the Lambda function"
-  value       = aws_lambda_function.contact_form.function_name
+  value       = aws_lambda_function.contact.function_name
 }
 
 output "rds_endpoint" {
