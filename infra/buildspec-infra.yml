@@ -47,7 +47,10 @@ phases:
     commands:
       - echo "Applying Terraform..."
       
-      # Plan (backend already initialized in pre_build)
+      # Initialize Terraform backend (required for each phase)
+      - terraform -chdir=infra init -reconfigure
+      
+      # Plan
       - terraform -chdir=infra plan -out=tfplan
       
       # Apply
