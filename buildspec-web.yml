@@ -51,7 +51,7 @@ phases:
       - |
         set -e
         echo "AWS region: ${AWS_REGION:-unset}"
-        REQUIRED_WAIT=600
+        REQUIRED_WAIT=900
         echo "Hard wait enabled: sleeping for ${REQUIRED_WAIT}s before fetching SSM parameters..."
         i=0
         while [ "$i" -lt "$REQUIRED_WAIT" ]; do
