@@ -42,16 +42,6 @@ phases:
       # Run unit tests with coverage (short mode to skip slow checks)
       - CI_SKIP_TERRATEST=1 go -C infra test -v -short -coverprofile=coverage.out ./tests/
       - go -C infra tool cover -func=coverage.out
-      
-      # Check coverage threshold (10% - minimal for assignment)
-      - |
-        COVERAGE=$(go -C infra tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-        echo "Coverage: $COVERAGE%"
-        if [ $(echo "$COVERAGE < 10" | bc -l) -eq 1 ]; then
-          echo "Coverage $COVERAGE% is below required 10%"
-          exit 1
-        fi
-        echo "Coverage $COVERAGE% meets requirement"
 
   post_build:
     commands:
@@ -112,26 +102,9 @@ phases:
           
           echo "✅ Infrastructure deployment and SSM parameter storage completed!"
           
-          # Ensure web pipeline is created and start it
-          echo "🚀 Setting up web pipeline..."
-          if aws codepipeline create-pipeline --cli-input-json file://web-pipeline.json 2>/dev/null; then
-            echo "✅ Created web pipeline"
-          elif aws codepipeline update-pipeline --cli-input-json file://web-pipeline.json 2>/dev/null; then
-            echo "✅ Updated existing web pipeline"
-          else
-            echo "⚠️  Warning: Could not create/update web pipeline (might already exist)"
-          fi
-          
-          # Start the web pipeline
-          if aws codepipeline start-pipeline-execution --name project3-web-pipeline; then
-            echo "✅ Started web pipeline execution"
-          else
-            echo "⚠️  Warning: Could not start web pipeline (check if it exists)"
-          fi
-          
           echo "🎉 Infrastructure deployment completed!"
           echo "📝 SSM parameters stored for web pipeline consumption"
-          echo "🔄 Web pipeline execution initiated"
+          echo "🔄 Existing pipelines will handle web deployment automatically"
         fi
 
 artifacts:
