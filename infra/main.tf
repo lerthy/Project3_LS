@@ -460,6 +460,10 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 # -------------------
 # Infrastructure Pipeline (Terraform)
 # -------------------
+# NOTE: Commented out to avoid circular dependency - the infrastructure pipeline
+# should not manage itself. This pipeline should be created manually or through
+# a separate bootstrap process.
+/*
 resource "aws_codepipeline" "infra_pipeline" {
   name     = "project3-infra-pipeline"
   role_arn = aws_iam_role.codepipeline_role.arn
@@ -506,3 +510,4 @@ resource "aws_codepipeline" "infra_pipeline" {
     }
   }
 }
+*/

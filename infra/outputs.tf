@@ -38,10 +38,11 @@ output "rds_endpoint" {
   value       = aws_db_instance.contact_db.endpoint
 }
 
-output "infra_pipeline_name" {
-  description = "Name of the infrastructure CodePipeline"
-  value       = aws_codepipeline.infra_pipeline.name
-}
+# NOTE: Commented out because infra pipeline is not managed by Terraform (circular dependency)
+# output "infra_pipeline_name" {
+#   description = "Name of the infrastructure CodePipeline"
+#   value       = aws_codepipeline.infra_pipeline.name
+# }
 
 output "codepipeline_artifacts_bucket" {
   description = "S3 bucket used for CodePipeline artifacts"
