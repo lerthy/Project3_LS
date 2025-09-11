@@ -436,6 +436,13 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
           "codebuild:StartBuild"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codepipeline:StartPipelineExecution"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -489,6 +496,22 @@ resource "aws_codepipeline" "infra_pipeline" {
       }
     }
   }
+
+  stage {
+    name = "TriggerWebPipeline"
+
+    action {
+      name            = "TriggerWebDeploy"
+      category        = "Invoke"
+      owner           = "AWS"
+      provider        = "CodePipeline"
+      version         = "1"
+
+      configuration = {
+        PipelineName = aws_codepipeline.web_pipeline.name
+      }
+    }
+  }
 }
 
 # -------------------
@@ -515,10 +538,11 @@ resource "aws_codepipeline" "web_pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        Owner      = "lerthy"
-        Repo       = "Project3_LS"
-        Branch     = "sibora-v2"
-        OAuthToken = data.aws_ssm_parameter.github_token.value
+        Owner            = "lerthy"
+        Repo             = "Project3_LS"
+        Branch           = "sibora-v2"
+        OAuthToken       = data.aws_ssm_parameter.github_token.value
+        PollForSourceChanges = "false"
       }
     }
   }
