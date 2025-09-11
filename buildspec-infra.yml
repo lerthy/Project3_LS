@@ -102,9 +102,17 @@ phases:
           
           echo "✅ Infrastructure deployment and SSM parameter storage completed!"
           
+          # Start the web pipeline (using existing project name)
+          echo "🚀 Starting web pipeline..."
+          if aws codebuild start-build --project-name project3-web-build --region eu-north-1; then
+            echo "✅ Started web pipeline execution"
+          else
+            echo "⚠️  Warning: Could not start web pipeline (check if it exists)"
+          fi
+          
           echo "🎉 Infrastructure deployment completed!"
           echo "📝 SSM parameters stored for web pipeline consumption"
-          echo "🔄 Existing pipelines will handle web deployment automatically"
+          echo "🔄 Web pipeline execution initiated"
         fi
 
 artifacts:
