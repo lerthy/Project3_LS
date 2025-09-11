@@ -1,0 +1,60 @@
+{
+  "pipeline": {
+    "name": "project3-web-pipeline",
+    "roleArn": "arn:aws:iam::791544005401:role/codepipeline-role-fb49b77e",
+    "artifactStore": {
+      "type": "S3",
+      "location": "codepipeline-artifacts-fb49b77e"
+    },
+    "stages": [
+      {
+        "name": "Source",
+        "actions": [
+          {
+            "name": "Source",
+            "actionTypeId": {
+              "category": "Source",
+              "owner": "ThirdParty",
+              "provider": "GitHub",
+              "version": "1"
+            },
+            "configuration": {
+              "Owner": "lerthy",
+              "Repo": "Project3_LS",
+              "Branch": "sibora-v2",
+              "OAuthToken": "{{GITHUB_TOKEN}}",
+              "PollForSourceChanges": "false"
+            },
+            "outputArtifacts": [
+              {
+                "name": "source_output"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Build",
+        "actions": [
+          {
+            "name": "Build",
+            "actionTypeId": {
+              "category": "Build",
+              "owner": "AWS",
+              "provider": "CodeBuild",
+              "version": "1"
+            },
+            "configuration": {
+              "ProjectName": "project3-web-build"
+            },
+            "inputArtifacts": [
+              {
+                "name": "source_output"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

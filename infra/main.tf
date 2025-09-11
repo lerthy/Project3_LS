@@ -440,9 +440,18 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
       {
         Effect = "Allow"
         Action = [
-          "codepipeline:StartPipelineExecution"
+          "codepipeline:StartPipelineExecution",
+          "codepipeline:GetPipeline",
+          "codepipeline:CreatePipeline"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole"
+        ]
+        Resource = "arn:aws:iam::*:role/codepipeline-role-*"
       }
     ]
   })

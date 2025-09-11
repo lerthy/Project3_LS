@@ -84,10 +84,85 @@ phases:
       
       - echo "Infrastructure deployment and SSM parameter storage completed!"
       
+      # Create web pipeline (if it doesn't exist)
+      - echo "Creating web application pipeline..."
+      - |
+        # Check if web pipeline already exists
+        if aws codepipeline get-pipeline --name project3-web-pipeline >/dev/null 2>&1; then
+          echo "Web pipeline already exists, skipping creation"
+        else
+          echo "Creating new web pipeline..."
+          
+          # Get required values
+          GITHUB_TOKEN=$(aws ssm get-parameter --name "/project3/github/token" --with-decryption --query 'Parameter.Value' --output text)
+          ARTIFACTS_BUCKET=$(terraform output -raw codepipeline_artifacts_bucket)
+          PIPELINE_ROLE_ARN=$(aws iam get-role --role-name codepipeline-role-fb49b77e --query 'Role.Arn' --output text)
+          
+          # Create pipeline JSON
+          cat > web-pipeline.json << EOF
+        {
+          "pipeline": {
+            "name": "project3-web-pipeline",
+            "roleArn": "$PIPELINE_ROLE_ARN",
+            "artifactStore": {
+              "type": "S3",
+              "location": "$ARTIFACTS_BUCKET"
+            },
+            "stages": [
+              {
+                "name": "Source",
+                "actions": [
+                  {
+                    "name": "Source",
+                    "actionTypeId": {
+                      "category": "Source",
+                      "owner": "ThirdParty",
+                      "provider": "GitHub",
+                      "version": "1"
+                    },
+                    "configuration": {
+                      "Owner": "lerthy",
+                      "Repo": "Project3_LS",
+                      "Branch": "sibora-v2",
+                      "OAuthToken": "$GITHUB_TOKEN",
+                      "PollForSourceChanges": "false"
+                    },
+                    "outputArtifacts": [{"name": "source_output"}]
+                  }
+                ]
+              },
+              {
+                "name": "Build",
+                "actions": [
+                  {
+                    "name": "Build",
+                    "actionTypeId": {
+                      "category": "Build",
+                      "owner": "AWS",
+                      "provider": "CodeBuild",
+                      "version": "1"
+                    },
+                    "configuration": {
+                      "ProjectName": "project3-web-build"
+                    },
+                    "inputArtifacts": [{"name": "source_output"}]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+        EOF
+          
+          # Create the pipeline
+          aws codepipeline create-pipeline --cli-input-json file://web-pipeline.json
+          echo "✅ Web pipeline created successfully!"
+        fi
+      
       # Trigger web pipeline after successful infrastructure deployment
       - echo "Triggering web pipeline..."
       - aws codepipeline start-pipeline-execution --name project3-web-pipeline
-      - echo "Web pipeline triggered successfully!"
+      - echo "✅ Web pipeline triggered successfully!"
 
 artifacts:
   files:
