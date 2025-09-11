@@ -63,13 +63,3 @@ output "codebuild_role_arn" {
   description = "ARN of the CodeBuild service role"
   value       = aws_iam_role.codebuild_role.arn
 }
-
-output "infrapipe_project_name" {
-  description = "Name of the infrastructure CodeBuild project"
-  value       = aws_codebuild_project.infrapipe.name
-}
-
-output "webpipe_project_name" {
-  description = "Name of the web CodeBuild project"
-  value       = aws_codebuild_project.webpipe.name
-}
