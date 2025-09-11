@@ -1,0 +1,29 @@
+{
+  "name": "polymath-website",
+  "version": "1.0.0",
+  "description": "Polymath Services website with contact form",
+  "type": "module",
+  "main": "static/index.html",
+  "scripts": {
+    "lint:js": "eslint static/**/*.js",
+    "lint:css": "stylelint static/**/*.css",
+    "lint": "npm run lint:js && npm run lint:css",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "build": "npm run lint && npm run test",
+    "deploy": "aws s3 sync static/ s3://$S3_BUCKET_NAME --delete"
+  },
+  "keywords": ["aws", "website", "contact-form"],
+  "author": "Polymath Services",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.35.0",
+    "postcss": "^8.4.41",
+    "stylelint": "^16.0.0",
+    "stylelint-config-standard": "^36.0.0",
+    "vitest": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "jsdom": "^25.0.0"
+  },
+  "dependencies": {}
+}
