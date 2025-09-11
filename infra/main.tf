@@ -493,6 +493,16 @@ resource "aws_iam_policy" "codebuild_additional_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "codebuild:StartBuild",
+          "codebuild:BatchGetBuilds"
+        ]
+        Resource = [
+          "arn:aws:codebuild:*:*:project/project3-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "iam:PassRole"
         ]
         Resource = [
