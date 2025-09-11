@@ -13,7 +13,7 @@ phases:
     commands:
       - export AWS_DEFAULT_REGION=us-east-1 AWS_REGION=us-east-1 TF_VAR_aws_region=us-east-1
       # Install Terraform
-      - wget https://rel  eases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+      - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
       - mv terraform /usr/local/bin/
       # Tools used to parse outputs
