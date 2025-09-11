@@ -74,8 +74,8 @@ phases:
       # Terraform init with backend
       - terraform -chdir=infra init
       
-      # Terraform plan (target only essential resources for speed)
-      - terraform -chdir=infra plan -target=aws_s3_bucket.main -target=aws_cloudfront_distribution.main -target=aws_api_gateway_rest_api.main -target=aws_lambda_function.contact_form -out=tfplan
+      # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
+      - terraform -chdir=infra plan -out=tfplan
       
       # Terraform apply (only if not a PR)
       - |
