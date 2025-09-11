@@ -66,17 +66,48 @@ phases:
 
   post_build:
     commands:
-      - echo "Skipping Terraform operations for speed - publishing dummy SSM parameters..."
+      - echo "Running Terraform plan and apply..."
       
-      # Skip actual Terraform plan/apply and publish dummy values for testing
+      # Create Lambda deployment package
+      - (cd web/lambda && zip -r ../../infra/lambda.zip .)
+      
+      # Terraform init with backend
+      - terraform -chdir=infra init
+      
+      # Terraform plan (target only essential resources for speed)
+      - terraform -chdir=infra plan -target=aws_s3_bucket.main -target=aws_cloudfront_distribution.main -target=aws_api_gateway_rest_api.main -target=aws_lambda_function.contact_form -out=tfplan
+      
+      # Terraform apply (only if not a PR)
       - |
-        echo "Publishing dummy Terraform outputs to SSM for testing..."
+        if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
+          echo "Skipping apply for pull request"
+        else
+          # Do not fail the build if apply fails; continue so pipeline does not rerun endlessly
+          terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
+        fi
+
+      # Export Terraform outputs to SSM for the Web pipeline to consume
+      - |
+        echo "Publishing Terraform outputs to SSM..."
         set -e
-        aws ssm put-parameter --name "/project3/outputs/bucket_name" --type String --overwrite --value "test-bucket-12345"
-        aws ssm put-parameter --name "/project3/outputs/cloudfront_distribution_id" --type String --overwrite --value "E1234567890ABC"
-        aws ssm put-parameter --name "/project3/outputs/api_gateway_url" --type String --overwrite --value "https://abc123.execute-api.us-east-1.amazonaws.com/prod"
-        aws ssm put-parameter --name "/project3/outputs/rds_endpoint" --type String --overwrite --value "test-db.cluster-abc123.us-east-1.rds.amazonaws.com"
-        echo "Dummy outputs published to SSM."
+        TF_OUTPUT_JSON=$(terraform -chdir=infra output -json || echo '{}')
+        BUCKET_NAME=$(echo "$TF_OUTPUT_JSON" | jq -r '.bucket_name.value // empty')
+        CF_DIST_ID=$(echo "$TF_OUTPUT_JSON" | jq -r '.cloudfront_distribution_id.value // empty')
+        API_URL=$(echo "$TF_OUTPUT_JSON" | jq -r '.api_gateway_url.value // empty')
+        RDS_ENDPOINT=$(echo "$TF_OUTPUT_JSON" | jq -r '.rds_endpoint.value // empty')
+        if [ -n "$BUCKET_NAME" ]; then
+          aws ssm put-parameter --name "/project3/outputs/bucket_name" --type String --overwrite --value "$BUCKET_NAME"
+        fi
+        if [ -n "$CF_DIST_ID" ]; then
+          aws ssm put-parameter --name "/project3/outputs/cloudfront_distribution_id" --type String --overwrite --value "$CF_DIST_ID"
+        fi
+        if [ -n "$API_URL" ]; then
+          aws ssm put-parameter --name "/project3/outputs/api_gateway_url" --type String --overwrite --value "$API_URL"
+        fi
+        if [ -n "$RDS_ENDPOINT" ]; then
+          aws ssm put-parameter --name "/project3/outputs/rds_endpoint" --type String --overwrite --value "$RDS_ENDPOINT"
+        fi
+        echo "Outputs published to SSM."
 
 artifacts:
   files:
