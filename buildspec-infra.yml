@@ -45,9 +45,25 @@ phases:
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
       
-      # TFLint
-      - (cd infra && tflint --init)
-      - (cd infra && tflint)
+      # TFLint with fallback when GitHub API is rate-limited
+      - |
+        set -e
+        cd infra
+        # Prepare fallback config (core terraform rules only)
+        cat > .tflint.ci.hcl <<'EOF'
+        plugin "terraform" {
+          enabled = true
+          preset  = "recommended"
+        }
+        EOF
+        # Try normal init; if it fails due to rate limit, lint with fallback config
+        if tflint --init; then
+          tflint
+        else
+          echo "tflint --init failed (likely GH rate limit). Using fallback config."
+          tflint -c .tflint.ci.hcl
+        fi
+        cd - >/dev/null
 
   build:
     commands:
