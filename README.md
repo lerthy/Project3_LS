@@ -1,6 +1,7 @@
 ## Project: AWS CI/CD with S3, CloudFront, Lambda, API Gateway, and RDS
 
 
+
 This repository implements two CI/CD pipelines (Infrastructure and Web) that provision AWS infrastructure with Terraform and deploy a two-page static website with a contact form backed by API Gateway → Lambda → RDS (PostgreSQL).
 
 Both pipelines enforce linting and unit test coverage thresholds.
