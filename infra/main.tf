@@ -474,7 +474,7 @@ resource "aws_codepipeline" "infra_pipeline" {
       configuration = {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = "lerthy/Project3_LS"
-        BranchName       = "sibora"
+        BranchName       = "ci-fix-tflint"
       }
     }
   }
@@ -523,7 +523,7 @@ resource "aws_codepipeline" "web_pipeline" {
       configuration = {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = "lerthy/Project3_LS"
-        BranchName       = "sibora"
+        BranchName       = "ci-fix-tflint"
       }
     }
   }
