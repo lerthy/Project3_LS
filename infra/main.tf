@@ -16,10 +16,8 @@ data "aws_ssm_parameter" "db_name" {
   name = var.db_name_ssm_name
 }
 
-data "aws_ssm_parameter" "github_token" {
-  name = "/project3/github/token"
-  with_decryption = true
-}
+# NOTE: github_token data source removed since infrastructure pipeline
+# is not managed by Terraform to avoid circular dependency
 
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
