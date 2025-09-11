@@ -108,7 +108,7 @@ phases:
           # Store API Gateway URL
           API_GATEWAY_ID=$(terraform -chdir=infra output -raw api_gateway_id)
           API_URL="https://${API_GATEWAY_ID}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/dev/contact"
-          if aws ssm put-parameter --name "/project3/api-gateway-url" --value "$API_URL" --overwrite; then
+          if aws ssm put-parameter --name "/project3/api-gateway-url" --value "$API_URL" --type "String" --overwrite; then
             echo "✅ Stored API Gateway URL: $API_URL"
           else
             echo "❌ Failed to store API Gateway URL - check CodeBuild IAM permissions"
@@ -118,7 +118,7 @@ phases:
           
           # Store S3 bucket name
           S3_BUCKET=$(terraform -chdir=infra output -raw s3_bucket_name)
-          if aws ssm put-parameter --name "/project3/s3-bucket" --value "$S3_BUCKET" --overwrite; then
+          if aws ssm put-parameter --name "/project3/s3-bucket" --value "$S3_BUCKET" --type "String" --overwrite; then
             echo "✅ Stored S3 Bucket: $S3_BUCKET"
           else
             echo "❌ Failed to store S3 bucket name"
@@ -127,7 +127,7 @@ phases:
           
           # Store CloudFront distribution ID
           CLOUDFRONT_ID=$(terraform -chdir=infra output -raw cloudfront_distribution_id)
-          if aws ssm put-parameter --name "/project3/cloudfront-distribution-id" --value "$CLOUDFRONT_ID" --overwrite; then
+          if aws ssm put-parameter --name "/project3/cloudfront-distribution-id" --value "$CLOUDFRONT_ID" --type "String" --overwrite; then
             echo "✅ Stored CloudFront Distribution ID: $CLOUDFRONT_ID"
           else
             echo "❌ Failed to store CloudFront distribution ID"
@@ -136,7 +136,7 @@ phases:
           
           # Store Lambda function name
           LAMBDA_NAME=$(terraform -chdir=infra output -raw lambda_function_name)
-          if aws ssm put-parameter --name "/project3/lambda-function-name" --value "$LAMBDA_NAME" --overwrite; then
+          if aws ssm put-parameter --name "/project3/lambda-function-name" --value "$LAMBDA_NAME" --type "String" --overwrite; then
             echo "✅ Stored Lambda Function Name: $LAMBDA_NAME"
           else
             echo "❌ Failed to store Lambda function name"
