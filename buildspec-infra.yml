@@ -38,9 +38,18 @@ phases:
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
       
-      # TFLint (skip failing init when GitHub rate-limits)
-      - (cd infra && tflint --init) || echo "tflint --init skipped due to GitHub rate limit"
-      - (cd infra && tflint)
+      # TFLint plugins (preinstall aws ruleset to avoid GitHub API during init)
+      - |
+        set -e
+        mkdir -p /root/.tflint.d/plugins
+        curl -sL -o /root/.tflint.d/plugins/tflint-ruleset-aws.zip \
+          https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/v0.29.0/tflint-ruleset-aws_linux_amd64.zip || \
+          (echo "Retrying ruleset download..." && sleep 2 && curl -sL -o /root/.tflint.d/plugins/tflint-ruleset-aws.zip \
+            https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/v0.29.0/tflint-ruleset-aws_linux_amd64.zip)
+        unzip -o /root/.tflint.d/plugins/tflint-ruleset-aws.zip -d /root/.tflint.d/plugins
+        export TFLINT_PLUGIN_DIR=/root/.tflint.d/plugins
+        (cd infra && tflint --init) || echo "tflint --init skipped (plugins preinstalled)"
+      - (cd infra && TFLINT_PLUGIN_DIR=/root/.tflint.d/plugins tflint)
 
   build:
     commands:
