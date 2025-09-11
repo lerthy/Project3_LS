@@ -42,17 +42,30 @@ phases:
     commands:
       - echo "Deploying to S3 and updating Lambda..."
       
-      # Get API Gateway URL dynamically
+      # Get infrastructure info from SSM Parameter Store (set by Infrastructure Pipeline)
+      - echo "Retrieving infrastructure configuration from SSM Parameter Store..."
       - |
-        echo "Fetching API Gateway URL..."
-        API_GATEWAY_URL=$(aws apigateway get-rest-apis --query 'items[?name==`contact-api`].id' --output text)
-        if [ -n "$API_GATEWAY_URL" ]; then
-          API_GATEWAY_URL="https://${API_GATEWAY_URL}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/dev/contact"
-          echo "Using dynamically discovered API Gateway URL: $API_GATEWAY_URL"
-        else
-          echo "Error: Could not find contact-api REST API"
+        API_GATEWAY_URL=$(aws ssm get-parameter --name "/project3/api-gateway-url" --query 'Parameter.Value' --output text 2>/dev/null || echo "MISSING")
+        S3_BUCKET=$(aws ssm get-parameter --name "/project3/s3-bucket" --query 'Parameter.Value' --output text 2>/dev/null || echo "MISSING")
+        CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/project3/cloudfront-distribution-id" --query 'Parameter.Value' --output text 2>/dev/null || echo "MISSING")
+        LAMBDA_FUNCTION_NAME=$(aws ssm get-parameter --name "/project3/lambda-function-name" --query 'Parameter.Value' --output text 2>/dev/null || echo "MISSING")
+        
+        # Validate that infrastructure pipeline has completed
+        if [ "$API_GATEWAY_URL" = "MISSING" ] || [ "$S3_BUCKET" = "MISSING" ] || [ "$CLOUDFRONT_DISTRIBUTION_ID" = "MISSING" ] || [ "$LAMBDA_FUNCTION_NAME" = "MISSING" ]; then
+          echo "ERROR: Infrastructure not deployed yet! Please run Infrastructure Pipeline first."
+          echo "Missing parameters:"
+          [ "$API_GATEWAY_URL" = "MISSING" ] && echo "  - API Gateway URL"
+          [ "$S3_BUCKET" = "MISSING" ] && echo "  - S3 Bucket"
+          [ "$CLOUDFRONT_DISTRIBUTION_ID" = "MISSING" ] && echo "  - CloudFront Distribution ID"
+          [ "$LAMBDA_FUNCTION_NAME" = "MISSING" ] && echo "  - Lambda Function Name"
           exit 1
         fi
+        
+        echo "✅ Infrastructure configuration retrieved successfully:"
+        echo "   API Gateway URL: $API_GATEWAY_URL"
+        echo "   S3 Bucket: $S3_BUCKET"
+        echo "   CloudFront Distribution ID: $CLOUDFRONT_DISTRIBUTION_ID"
+        echo "   Lambda Function Name: $LAMBDA_FUNCTION_NAME"
       
       # Replace API URL in config file
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
@@ -68,7 +81,7 @@ phases:
       - npm install --production
       - zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store*" "*node_modules/.cache*"
       - cd ..
-      - aws lambda update-function-code --function-name contact-form --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
+      - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://lambda-deployment.zip --region "$AWS_DEFAULT_REGION"
       - rm -rf deployment lambda-deployment.zip
       - cd ../..
       

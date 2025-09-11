@@ -1,0 +1,95 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      go: 1.21
+    commands:
+      # Install Terraform
+      - wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      - sudo apt update && sudo apt install terraform
+      
+      # Install tflint
+      - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+  pre_build:
+    commands:
+      - echo "Running Terraform quality checks..."
+      - cd infra
+      
+      # Terraform formatting check
+      - terraform fmt -check=true
+      
+      # Terraform validation
+      - terraform validate
+      
+      # TFLint
+      - tflint
+
+  build:
+    commands:
+      - echo "Running Terraform tests..."
+      - cd infra
+      
+      # Run Terratest (if available)
+      - |
+        if [ -f "tests/infra_integration_test.go" ]; then
+          cd tests
+          go mod tidy
+          go test -v -timeout 30m
+          cd ..
+        fi
+
+  post_build:
+    commands:
+      - echo "Applying Terraform..."
+      - cd infra
+      
+      # Initialize Terraform
+      - terraform init
+      
+      # Plan
+      - terraform plan -out=tfplan
+      
+      # Apply
+      - terraform apply -auto-approve tfplan
+      
+      - echo "Storing infrastructure outputs in SSM Parameter Store..."
+      
+      # Store API Gateway URL
+      - |
+        API_GATEWAY_ID=$(terraform output -raw api_gateway_id)
+        API_URL="https://${API_GATEWAY_ID}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/dev/contact"
+        aws ssm put-parameter --name "/project3/api-gateway-url" --value "$API_URL" --overwrite
+        echo "Stored API Gateway URL: $API_URL"
+      
+      # Store S3 bucket name
+      - |
+        S3_BUCKET=$(terraform output -raw s3_bucket_name)
+        aws ssm put-parameter --name "/project3/s3-bucket" --value "$S3_BUCKET" --overwrite
+        echo "Stored S3 Bucket: $S3_BUCKET"
+      
+      # Store CloudFront distribution ID
+      - |
+        CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)
+        aws ssm put-parameter --name "/project3/cloudfront-distribution-id" --value "$CLOUDFRONT_ID" --overwrite
+        echo "Stored CloudFront Distribution ID: $CLOUDFRONT_ID"
+      
+      # Store Lambda function name
+      - |
+        LAMBDA_NAME=$(terraform output -raw lambda_function_name)
+        aws ssm put-parameter --name "/project3/lambda-function-name" --value "$LAMBDA_NAME" --overwrite
+        echo "Stored Lambda Function Name: $LAMBDA_NAME"
+      
+      - echo "Infrastructure deployment and SSM parameter storage completed!"
+
+artifacts:
+  files:
+    - 'infra/terraform.tfstate'
+    - 'infra/tfplan'
+  name: infra-artifacts
+
+cache:
+  paths:
+    - 'infra/.terraform/**/*'
