@@ -75,16 +75,31 @@ phases:
           terraform -chdir=infra apply -auto-approve tfplan
           
           # Get the CodeBuild role name from the current execution context
-          CODEBUILD_ROLE_NAME=$(aws sts get-caller-identity --query 'Arn' --output text | cut -d'/' -f2)
+          CODEBUILD_ROLE_ARN=$(aws sts get-caller-identity --query 'Arn' --output text)
+          CODEBUILD_ROLE_NAME=$(echo $CODEBUILD_ROLE_ARN | cut -d'/' -f2)
           ADDITIONAL_POLICY_ARN=$(terraform -chdir=infra output -raw codebuild_additional_policy_arn)
           
-          # Try to attach the additional permissions policy to CodeBuild role
-          echo "Attempting to attach additional permissions to CodeBuild role..."
-          if aws iam attach-role-policy --role-name "$CODEBUILD_ROLE_NAME" --policy-arn "$ADDITIONAL_POLICY_ARN" 2>/dev/null; then
-            echo "✅ Successfully attached additional permissions policy"
+          echo "CodeBuild Role: $CODEBUILD_ROLE_NAME"
+          echo "Policy ARN: $ADDITIONAL_POLICY_ARN"
+          
+          # Check if policy is already attached
+          if aws iam list-attached-role-policies --role-name "$CODEBUILD_ROLE_NAME" --query 'AttachedPolicies[?PolicyArn==`'$ADDITIONAL_POLICY_ARN'`]' --output text | grep -q "$ADDITIONAL_POLICY_ARN"; then
+            echo "✅ Policy already attached to role"
           else
-            echo "⚠️  Could not auto-attach policy. Manual attachment required:"
-            echo "   aws iam attach-role-policy --role-name $CODEBUILD_ROLE_NAME --policy-arn $ADDITIONAL_POLICY_ARN"
+            # Try to attach the additional permissions policy to CodeBuild role
+            echo "Attempting to attach additional permissions to CodeBuild role..."
+            if aws iam attach-role-policy --role-name "$CODEBUILD_ROLE_NAME" --policy-arn "$ADDITIONAL_POLICY_ARN"; then
+              echo "✅ Successfully attached additional permissions policy"
+              echo "⏳ Waiting 10 seconds for IAM permissions to propagate..."
+              sleep 10
+            else
+              echo "❌ Failed to auto-attach policy. Manual attachment required:"
+              echo "   aws iam attach-role-policy --role-name $CODEBUILD_ROLE_NAME --policy-arn $ADDITIONAL_POLICY_ARN"
+              echo ""
+              echo "Or attach via AWS Console:"
+              echo "   IAM → Roles → $CODEBUILD_ROLE_NAME → Attach policies → Search: CodeBuildAdditionalPermissions-fb49b77e"
+              exit 1
+            fi
           fi
           
           # Store infrastructure outputs in SSM Parameter Store
