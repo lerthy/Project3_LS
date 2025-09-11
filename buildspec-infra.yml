@@ -38,8 +38,8 @@ phases:
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
       
-      # TFLint
-      - (cd infra && tflint --init)
+      # TFLint (skip failing init when GitHub rate-limits)
+      - (cd infra && tflint --init) || echo "tflint --init skipped due to GitHub rate limit"
       - (cd infra && tflint)
 
   build:
