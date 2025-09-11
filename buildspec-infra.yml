@@ -109,5 +109,4 @@ phases:
 artifacts:
   files:
     - 'infra/tfplan'
-    - 'infra/coverage.out'
   name: terraform-artifacts
