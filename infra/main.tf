@@ -560,3 +560,119 @@ resource "aws_codepipeline" "infra_pipeline" {
   }
 }
 */
+
+# -------------------
+# CodeBuild Projects for GitHub Integration
+# -------------------
+
+# IAM Role for CodeBuild projects
+resource "aws_iam_role" "codebuild_role" {
+  name = "codebuild-service-role-${random_id.rand.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Attach basic CodeBuild policy
+resource "aws_iam_role_policy_attachment" "codebuild_base_policy" {
+  role       = aws_iam_role.codebuild_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"
+}
+
+# Attach additional permissions policy
+resource "aws_iam_role_policy_attachment" "codebuild_additional_policy" {
+  role       = aws_iam_role.codebuild_role.name
+  policy_arn = aws_iam_policy.codebuild_additional_permissions.arn
+}
+
+# Infrastructure CodeBuild Project
+resource "aws_codebuild_project" "infrapipe" {
+  name         = "infrapipe"
+  description  = "Infrastructure pipeline for Project3"
+  service_role = aws_iam_role.codebuild_role.arn
+
+  artifacts {
+    type = "NO_ARTIFACTS"
+  }
+
+  environment {
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image        = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type         = "LINUX_CONTAINER"
+
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+  }
+
+  source {
+    type = "GITHUB"
+    location = "https://github.com/lerthy/Project3_LS.git"
+    buildspec = "buildspec-infra.yml"
+    
+    git_clone_depth = 1
+    
+    git_submodules_config {
+      fetch_submodules = false
+    }
+  }
+
+  source_version = "refs/heads/sibora-v2"
+
+  tags = {
+    Environment = "dev"
+    Project     = "project3"
+  }
+}
+
+# Web CodeBuild Project  
+resource "aws_codebuild_project" "webpipe" {
+  name         = "webpipe"
+  description  = "Web pipeline for Project3"
+  service_role = aws_iam_role.codebuild_role.arn
+
+  artifacts {
+    type = "NO_ARTIFACTS"
+  }
+
+  environment {
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image        = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type         = "LINUX_CONTAINER"
+
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+  }
+
+  source {
+    type = "GITHUB"
+    location = "https://github.com/lerthy/Project3_LS.git"
+    buildspec = "buildspec-web.yml"
+    
+    git_clone_depth = 1
+    
+    git_submodules_config {
+      fetch_submodules = false
+    }
+  }
+
+  source_version = "refs/heads/sibora-v2"
+
+  tags = {
+    Environment = "dev"
+    Project     = "project3"
+  }
+}
