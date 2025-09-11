@@ -16,10 +16,6 @@ data "aws_ssm_parameter" "db_name" {
   name = var.db_name_ssm_name
 }
 
-data "aws_ssm_parameter" "github_token" {
-  name            = "/project3/github/token"
-  with_decryption = true
-}
 
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
@@ -296,7 +292,7 @@ resource "aws_lambda_function" "contact" {
 
 # Allow API Gateway to invoke the Lambda function
 resource "aws_lambda_permission" "apigw_invoke" {
-  statement_id  = "AllowAPIGatewayInvoke"
+  statement_id  = "AllowAPIGatewayInvoke-${random_id.rand.hex}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.contact.function_name
   principal     = "apigateway.amazonaws.com"
@@ -434,7 +430,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
         Action = [
           "codestar-connections:UseConnection"
         ]
-        Resource = var.codestar_connection_arn
+        Resource = "arn:aws:codeconnections:us-east-1:264765155009:connection/53a37d01-3b7e-44d8-84bb-37c5947aec8b"
       },
       {
         Effect = "Allow"
