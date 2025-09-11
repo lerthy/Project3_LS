@@ -5,13 +5,13 @@ phases:
     runtime-versions:
       golang: 1.21
     commands:
-      # Install required packages
-      - apt-get update && apt-get install -y bc unzip
+      # Install required packages (Amazon Linux uses yum)
+      - yum update -y && yum install -y bc unzip wget
       
       # Install Terraform
       - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
-      - sudo mv terraform /usr/local/bin/
+      - mv terraform /usr/local/bin/
       
       # Install tflint
       - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
