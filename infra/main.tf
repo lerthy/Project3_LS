@@ -309,7 +309,7 @@ data "aws_caller_identity" "current" {}
 # RDS Database
 # -------------------
 resource "aws_db_instance" "contact_db" {
-  identifier        = "contact-db-${random_id.rand.hex}"
+  identifier        = "contact-db-fb49b77e"
   engine            = "postgres"
   engine_version    = "15.7"  # Specific version for predictability
   instance_class    = "db.t3.micro"  # Free Tier eligible
