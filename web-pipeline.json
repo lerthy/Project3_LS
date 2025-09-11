@@ -21,7 +21,7 @@
             "configuration": {
               "Owner": "lerthy",
               "Repo": "Project3_LS",
-              "Branch": "sibora",
+              "Branch": "sibora-v2",
               "OAuthToken": "{{GITHUB_TOKEN}}",
               "PollForSourceChanges": "false"
             },

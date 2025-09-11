@@ -483,7 +483,7 @@ resource "aws_codepipeline" "infra_pipeline" {
       configuration = {
         Owner      = "lerthy"
         Repo       = "Project3_LS"
-        Branch     = "sibora"
+        Branch     = "sibora-v2"
         OAuthToken = data.aws_ssm_parameter.github_token.value
       }
     }
