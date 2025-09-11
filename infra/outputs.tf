@@ -43,11 +43,6 @@ output "infra_pipeline_name" {
   value       = aws_codepipeline.infra_pipeline.name
 }
 
-output "web_pipeline_name" {
-  description = "Name of the web application CodePipeline"
-  value       = aws_codepipeline.web_pipeline.name
-}
-
 output "codepipeline_artifacts_bucket" {
   description = "S3 bucket used for CodePipeline artifacts"
   value       = aws_s3_bucket.codepipeline_artifacts.bucket

@@ -83,6 +83,11 @@ phases:
         echo "Stored Lambda Function Name: $LAMBDA_NAME"
       
       - echo "Infrastructure deployment and SSM parameter storage completed!"
+      
+      # Trigger web pipeline after successful infrastructure deployment
+      - echo "Triggering web pipeline..."
+      - aws codepipeline start-pipeline-execution --name project3-web-pipeline
+      - echo "Web pipeline triggered successfully!"
 
 artifacts:
   files:
