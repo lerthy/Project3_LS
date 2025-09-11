@@ -102,6 +102,20 @@ phases:
           
           echo "✅ Infrastructure deployment and SSM parameter storage completed!"
           
+          # Update web pipeline configuration with actual GitHub token
+          echo "🔧 Updating web pipeline configuration..."
+          GITHUB_TOKEN=$(aws ssm get-parameter --name "/project3/github/token" --with-decryption --region eu-north-1 --query 'Parameter.Value' --output text)
+          
+          # Create temporary pipeline file with token replaced
+          sed "s/{{GITHUB_TOKEN}}/$GITHUB_TOKEN/g" web-pipeline.json > web-pipeline-updated.json
+          
+          # Update the web pipeline with the new configuration
+          if aws codepipeline update-pipeline --cli-input-json file://web-pipeline-updated.json --region eu-north-1; then
+            echo "✅ Updated web pipeline with GitHub token"
+          else
+            echo "⚠️  Warning: Could not update web pipeline"
+          fi
+          
           # Start the web pipeline (CodePipeline, not CodeBuild)
           echo "🚀 Starting web pipeline..."
           if aws codepipeline start-pipeline-execution --name project3-web-pipeline --region eu-north-1; then
