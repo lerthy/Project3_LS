@@ -74,19 +74,148 @@ phases:
           # Apply Terraform
           terraform -chdir=infra apply -auto-approve tfplan
           
-          # NOTE: SSM parameter storage and web pipeline creation removed
-          # due to insufficient CodeBuild permissions. These should be handled
-          # through a separate process or by adding proper IAM permissions.
-          echo "✅ Infrastructure deployment completed successfully!"
-          echo "Infrastructure outputs:"
-          terraform -chdir=infra output
+          # Get the CodeBuild role name from the current execution context
+          CODEBUILD_ROLE_NAME=$(aws sts get-caller-identity --query 'Arn' --output text | cut -d'/' -f2)
+          ADDITIONAL_POLICY_ARN=$(terraform -chdir=infra output -raw codebuild_additional_policy_arn)
           
-          echo ""
-          echo "🔧 Manual steps required:"
-          echo "1. Store the above outputs in SSM Parameter Store manually, or"
-          echo "2. Configure CodeBuild role with ssm:PutParameter permissions"
-          echo "3. Create and trigger the web pipeline manually, or"
-          echo "4. Configure CodeBuild role with codepipeline:CreatePipeline and codepipeline:StartPipelineExecution permissions"
+          # Try to attach the additional permissions policy to CodeBuild role
+          echo "Attempting to attach additional permissions to CodeBuild role..."
+          if aws iam attach-role-policy --role-name "$CODEBUILD_ROLE_NAME" --policy-arn "$ADDITIONAL_POLICY_ARN" 2>/dev/null; then
+            echo "✅ Successfully attached additional permissions policy"
+          else
+            echo "⚠️  Could not auto-attach policy. Manual attachment required:"
+            echo "   aws iam attach-role-policy --role-name $CODEBUILD_ROLE_NAME --policy-arn $ADDITIONAL_POLICY_ARN"
+          fi
+          
+          # Store infrastructure outputs in SSM Parameter Store
+          echo "Storing infrastructure outputs in SSM Parameter Store..."
+          
+          # Store API Gateway URL
+          API_GATEWAY_ID=$(terraform -chdir=infra output -raw api_gateway_id)
+          API_URL="https://${API_GATEWAY_ID}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/dev/contact"
+          if aws ssm put-parameter --name "/project3/api-gateway-url" --value "$API_URL" --overwrite; then
+            echo "✅ Stored API Gateway URL: $API_URL"
+          else
+            echo "❌ Failed to store API Gateway URL - check CodeBuild IAM permissions"
+            echo "Required policy ARN: $(terraform -chdir=infra output -raw codebuild_additional_policy_arn)"
+            exit 1
+          fi
+          
+          # Store S3 bucket name
+          S3_BUCKET=$(terraform -chdir=infra output -raw s3_bucket_name)
+          if aws ssm put-parameter --name "/project3/s3-bucket" --value "$S3_BUCKET" --overwrite; then
+            echo "✅ Stored S3 Bucket: $S3_BUCKET"
+          else
+            echo "❌ Failed to store S3 bucket name"
+            exit 1
+          fi
+          
+          # Store CloudFront distribution ID
+          CLOUDFRONT_ID=$(terraform -chdir=infra output -raw cloudfront_distribution_id)
+          if aws ssm put-parameter --name "/project3/cloudfront-distribution-id" --value "$CLOUDFRONT_ID" --overwrite; then
+            echo "✅ Stored CloudFront Distribution ID: $CLOUDFRONT_ID"
+          else
+            echo "❌ Failed to store CloudFront distribution ID"
+            exit 1
+          fi
+          
+          # Store Lambda function name
+          LAMBDA_NAME=$(terraform -chdir=infra output -raw lambda_function_name)
+          if aws ssm put-parameter --name "/project3/lambda-function-name" --value "$LAMBDA_NAME" --overwrite; then
+            echo "✅ Stored Lambda Function Name: $LAMBDA_NAME"
+          else
+            echo "❌ Failed to store Lambda function name"
+            exit 1
+          fi
+          
+          echo "✅ Infrastructure deployment and SSM parameter storage completed!"
+          
+          # Create web pipeline (if it doesn't exist)
+          echo "Creating web application pipeline..."
+          if aws codepipeline get-pipeline --name project3-web-pipeline >/dev/null 2>&1; then
+            echo "Web pipeline already exists, skipping creation"
+          else
+            echo "Creating new web pipeline..."
+            
+            # Get required values
+            GITHUB_TOKEN=$(aws ssm get-parameter --name "/project3/github/token" --with-decryption --query 'Parameter.Value' --output text)
+            ARTIFACTS_BUCKET=$(terraform -chdir=infra output -raw codepipeline_artifacts_bucket)
+            PIPELINE_ROLE_ARN=$(terraform -chdir=infra output -raw codepipeline_role_arn)
+            
+            # Create pipeline JSON
+            cat > web-pipeline.json << EOF
+        {
+          "pipeline": {
+            "name": "project3-web-pipeline",
+            "roleArn": "$PIPELINE_ROLE_ARN",
+            "artifactStore": {
+              "type": "S3",
+              "location": "$ARTIFACTS_BUCKET"
+            },
+            "stages": [
+              {
+                "name": "Source",
+                "actions": [
+                  {
+                    "name": "Source",
+                    "actionTypeId": {
+                      "category": "Source",
+                      "owner": "ThirdParty",
+                      "provider": "GitHub",
+                      "version": "1"
+                    },
+                    "configuration": {
+                      "Owner": "lerthy",
+                      "Repo": "Project3_LS",
+                      "Branch": "sibora-v2",
+                      "OAuthToken": "$GITHUB_TOKEN",
+                      "PollForSourceChanges": "false"
+                    },
+                    "outputArtifacts": [{"name": "source_output"}]
+                  }
+                ]
+              },
+              {
+                "name": "Build",
+                "actions": [
+                  {
+                    "name": "Build",
+                    "actionTypeId": {
+                      "category": "Build",
+                      "owner": "AWS",
+                      "provider": "CodeBuild",
+                      "version": "1"
+                    },
+                    "configuration": {
+                      "ProjectName": "project3-web-build"
+                    },
+                    "inputArtifacts": [{"name": "source_output"}]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+        EOF
+            
+            # Create the pipeline
+            if aws codepipeline create-pipeline --cli-input-json file://web-pipeline.json; then
+              echo "✅ Web pipeline created successfully!"
+            else
+              echo "❌ Failed to create web pipeline - check CodeBuild IAM permissions"
+              echo "Required policy ARN: $(terraform -chdir=infra output -raw codebuild_additional_policy_arn)"
+              exit 1
+            fi
+          fi
+          
+          # Trigger web pipeline after successful infrastructure deployment
+          echo "Triggering web pipeline..."
+          if aws codepipeline start-pipeline-execution --name project3-web-pipeline; then
+            echo "✅ Web pipeline triggered successfully!"
+          else
+            echo "❌ Failed to trigger web pipeline - check CodeBuild IAM permissions"
+            exit 1
+          fi
         fi
 
 artifacts:

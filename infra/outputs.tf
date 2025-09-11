@@ -53,3 +53,8 @@ output "codepipeline_role_arn" {
   description = "ARN of the CodePipeline service role"
   value       = aws_iam_role.codepipeline_role.arn
 }
+
+output "codebuild_additional_policy_arn" {
+  description = "ARN of the additional IAM policy that should be attached to CodeBuild service role"
+  value       = aws_iam_policy.codebuild_additional_permissions.arn
+}

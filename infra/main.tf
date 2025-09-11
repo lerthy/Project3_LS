@@ -456,6 +456,57 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 }
 
 # -------------------
+# Additional IAM Policy for CodeBuild Service Role
+# -------------------
+# This policy should be attached to the CodeBuild service role manually
+# or through AWS IAM console to enable SSM parameter storage and pipeline management
+resource "aws_iam_policy" "codebuild_additional_permissions" {
+  name        = "CodeBuildAdditionalPermissions-${random_id.rand.hex}"
+  description = "Additional permissions for CodeBuild to manage SSM parameters and pipelines"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:DeleteParameter"
+        ]
+        Resource = [
+          "arn:aws:ssm:*:*:parameter/project3/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codepipeline:CreatePipeline",
+          "codepipeline:UpdatePipeline",
+          "codepipeline:StartPipelineExecution",
+          "codepipeline:GetPipeline",
+          "codepipeline:GetPipelineState",
+          "codepipeline:GetPipelineExecution"
+        ]
+        Resource = [
+          "arn:aws:codepipeline:*:*:project3-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = [
+          aws_iam_role.codepipeline_role.arn
+        ]
+      }
+    ]
+  })
+}
+
+# -------------------
 # Infrastructure Pipeline (Terraform)
 # -------------------
 # NOTE: Commented out to avoid circular dependency - the infrastructure pipeline
