@@ -50,36 +50,18 @@ phases:
       # Wait (with timeout) for SSM parameters published by the infra pipeline
       - |
         set -e
-        TIMEOUT_SECONDS=${WEB_WAIT_TIMEOUT_SECONDS:-600}
-        INTERVAL=10
-        ELAPSED=0
         echo "AWS region: ${AWS_REGION:-unset}"
-        echo "Waiting up to ${TIMEOUT_SECONDS}s for SSM parameters..."
-        until aws ssm get-parameter --name "/project3/outputs/bucket_name" >/dev/null 2>&1; do
-          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-            echo "Timed out waiting for /project3/outputs/bucket_name after ${TIMEOUT_SECONDS}s"; exit 1;
-          fi
-          echo "Still waiting for /project3/outputs/bucket_name (elapsed ${ELAPSED}s)";
-          sleep $INTERVAL; ELAPSED=$((ELAPSED+INTERVAL));
+        REQUIRED_WAIT=600
+        echo "Hard wait enabled: sleeping for ${REQUIRED_WAIT}s before fetching SSM parameters..."
+        i=0
+        while [ "$i" -lt "$REQUIRED_WAIT" ]; do
+          sleep 10
+          i=$((i+10))
+          echo "Waited ${i}s/${REQUIRED_WAIT}s"
         done
+        echo "Fetching SSM parameters now..."
         BUCKET_NAME=$(aws ssm get-parameter --name "/project3/outputs/bucket_name" --query 'Parameter.Value' --output text)
-        ELAPSED=0
-        until aws ssm get-parameter --name "/project3/outputs/cloudfront_distribution_id" >/dev/null 2>&1; do
-          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-            echo "Timed out waiting for /project3/outputs/cloudfront_distribution_id after ${TIMEOUT_SECONDS}s"; exit 1;
-          fi
-          echo "Still waiting for /project3/outputs/cloudfront_distribution_id (elapsed ${ELAPSED}s)";
-          sleep $INTERVAL; ELAPSED=$((ELAPSED+INTERVAL));
-        done
         CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/project3/outputs/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
-        ELAPSED=0
-        until aws ssm get-parameter --name "/project3/outputs/api_gateway_url" >/dev/null 2>&1; do
-          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-            echo "Timed out waiting for /project3/outputs/api_gateway_url after ${TIMEOUT_SECONDS}s"; exit 1;
-          fi
-          echo "Still waiting for /project3/outputs/api_gateway_url (elapsed ${ELAPSED}s)";
-          sleep $INTERVAL; ELAPSED=$((ELAPSED+INTERVAL));
-        done
         API_GATEWAY_URL=$(aws ssm get-parameter --name "/project3/outputs/api_gateway_url" --query 'Parameter.Value' --output text)
         export S3_BUCKET="$BUCKET_NAME"
         echo "Resolved from SSM: S3_BUCKET=$S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID, API_GATEWAY_URL=$API_GATEWAY_URL"
