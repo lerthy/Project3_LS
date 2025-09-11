@@ -2,10 +2,12 @@
 import { Client } from "pg";
 
 export const handler = async (event) => {
+  console.log("Lambda invoked with:", JSON.stringify(event, null, 2));
+  
   // CORS headers for all responses
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type,Accept,Origin,X-Requested-With",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json"
   };
@@ -13,6 +15,7 @@ export const handler = async (event) => {
   try {
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
+      console.log("Handling OPTIONS request");
       return {
         statusCode: 200,
         headers: corsHeaders,
