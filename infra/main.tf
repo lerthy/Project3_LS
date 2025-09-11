@@ -16,11 +16,6 @@ data "aws_ssm_parameter" "db_name" {
   name = var.db_name_ssm_name
 }
 
-# GitHub token for CodeBuild webhooks
-data "aws_ssm_parameter" "github_token" {
-  name = "/project3/github/token"
-}
-
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
 # S3 Bucket for Website
@@ -539,7 +534,7 @@ resource "aws_codepipeline" "infra_pipeline" {
         Owner      = "lerthy"
         Repo       = "Project3_LS"
         Branch     = "sibora-v2"
-        OAuthToken = data.aws_ssm_parameter.github_token.value
+        OAuthToken = "{{GITHUB_TOKEN}}"
       }
     }
   }
@@ -597,118 +592,5 @@ resource "aws_iam_role_policy_attachment" "codebuild_additional_policy" {
   policy_arn = aws_iam_policy.codebuild_additional_permissions.arn
 }
 
-# Infrastructure CodeBuild Project
-resource "aws_codebuild_project" "infrapipe" {
-  name         = "infrapipe"
-  description  = "Infrastructure pipeline for Project3"
-  service_role = aws_iam_role.codebuild_role.arn
-
-  artifacts {
-    type = "NO_ARTIFACTS"
-  }
-
-  environment {
-    compute_type = "BUILD_GENERAL1_SMALL"
-    image        = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type         = "LINUX_CONTAINER"
-
-    environment_variable {
-      name  = "AWS_DEFAULT_REGION"
-      value = var.aws_region
-    }
-  }
-
-  source {
-    type = "GITHUB"
-    location = "https://github.com/lerthy/Project3_LS.git"
-    buildspec = "buildspec-infra.yml"
-    
-    git_clone_depth = 1
-    
-    git_submodules_config {
-      fetch_submodules = false
-    }
-  }
-
-  source_version = "refs/heads/sibora-v2"
-
-  tags = {
-    Environment = "dev"
-    Project     = "project3"
-  }
-}
-
-# CodeBuild Webhook for infrapipe - will be configured manually through AWS Console
-# resource "aws_codebuild_webhook" "infrapipe_webhook" {
-#   project_name = aws_codebuild_project.infrapipe.name
-#   build_type   = "BUILD"
-#
-#   filter_group {
-#     filter {
-#       type    = "EVENT"
-#       pattern = "PUSH"
-#     }
-#     filter {
-#       type    = "HEAD_REF"
-#       pattern = "^refs/heads/sibora-v2$"
-#     }
-#   }
-# }
-
-# Web CodeBuild Project  
-resource "aws_codebuild_project" "webpipe" {
-  name         = "webpipe"
-  description  = "Web pipeline for Project3"
-  service_role = aws_iam_role.codebuild_role.arn
-
-  artifacts {
-    type = "NO_ARTIFACTS"
-  }
-
-  environment {
-    compute_type = "BUILD_GENERAL1_SMALL"
-    image        = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type         = "LINUX_CONTAINER"
-
-    environment_variable {
-      name  = "AWS_DEFAULT_REGION"
-      value = var.aws_region
-    }
-  }
-
-  source {
-    type = "GITHUB"
-    location = "https://github.com/lerthy/Project3_LS.git"
-    buildspec = "buildspec-web.yml"
-    
-    git_clone_depth = 1
-    
-    git_submodules_config {
-      fetch_submodules = false
-    }
-  }
-
-  source_version = "refs/heads/sibora-v2"
-
-  tags = {
-    Environment = "dev"
-    Project     = "project3"
-  }
-}
-
-# CodeBuild Webhook for webpipe - will be configured manually through AWS Console
-# resource "aws_codebuild_webhook" "webpipe_webhook" {
-#   project_name = aws_codebuild_project.webpipe.name
-#   build_type   = "BUILD"
-#
-#   filter_group {
-#     filter {
-#       type    = "EVENT"
-#       pattern = "PUSH"
-#     }
-#     filter {
-#       type    = "HEAD_REF"
-#       pattern = "^refs/heads/sibora-v2$"
-#     }
-#   }
-# }
+# Note: CodeBuild projects for CI/CD are managed separately from infrastructure
+# to avoid circular dependency issues where infrastructure pipeline manages itself
