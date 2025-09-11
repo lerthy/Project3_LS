@@ -13,7 +13,7 @@ phases:
     commands:
       - export AWS_DEFAULT_REGION=us-east-1 AWS_REGION=us-east-1 TF_VAR_aws_region=us-east-1
       # Install Terraform
-      - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+      - wget https://rel  eases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
       - mv terraform /usr/local/bin/
       # Tools used to parse outputs
@@ -109,6 +109,7 @@ phases:
         BUCKET_NAME=$(echo "$TF_OUTPUT_JSON" | jq -r '.bucket_name.value // empty')
         CF_DIST_ID=$(echo "$TF_OUTPUT_JSON" | jq -r '.cloudfront_distribution_id.value // empty')
         API_URL=$(echo "$TF_OUTPUT_JSON" | jq -r '.api_gateway_url.value // empty')
+        RDS_ENDPOINT=$(echo "$TF_OUTPUT_JSON" | jq -r '.rds_endpoint.value // empty')
         if [ -n "$BUCKET_NAME" ]; then
           aws ssm put-parameter --name "/project3/outputs/bucket_name" --type String --overwrite --value "$BUCKET_NAME"
         fi
@@ -117,6 +118,9 @@ phases:
         fi
         if [ -n "$API_URL" ]; then
           aws ssm put-parameter --name "/project3/outputs/api_gateway_url" --type String --overwrite --value "$API_URL"
+        fi
+        if [ -n "$RDS_ENDPOINT" ]; then
+          aws ssm put-parameter --name "/project3/outputs/rds_endpoint" --type String --overwrite --value "$RDS_ENDPOINT"
         fi
         echo "Outputs published to SSM."
 
