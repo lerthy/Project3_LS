@@ -47,3 +47,8 @@ output "codepipeline_artifacts_bucket" {
   description = "S3 bucket used for CodePipeline artifacts"
   value       = aws_s3_bucket.codepipeline_artifacts.bucket
 }
+
+output "codepipeline_role_arn" {
+  description = "ARN of the CodePipeline service role"
+  value       = aws_iam_role.codepipeline_role.arn
+}

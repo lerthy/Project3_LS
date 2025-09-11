@@ -1,6 +1,6 @@
 module project3-infra
 
-go 1.24.6
+go 1.21
 
 require (
 	github.com/gruntwork-io/terratest v0.50.0
