@@ -16,8 +16,10 @@ data "aws_ssm_parameter" "db_name" {
   name = var.db_name_ssm_name
 }
 
-# NOTE: github_token data source removed since infrastructure pipeline
-# is not managed by Terraform to avoid circular dependency
+# GitHub token for CodeBuild webhooks
+data "aws_ssm_parameter" "github_token" {
+  name = "/project3/github/token"
+}
 
 # Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
 # -------------------
@@ -636,6 +638,23 @@ resource "aws_codebuild_project" "infrapipe" {
   }
 }
 
+# CodeBuild Webhook for infrapipe - will be configured manually through AWS Console
+# resource "aws_codebuild_webhook" "infrapipe_webhook" {
+#   project_name = aws_codebuild_project.infrapipe.name
+#   build_type   = "BUILD"
+#
+#   filter_group {
+#     filter {
+#       type    = "EVENT"
+#       pattern = "PUSH"
+#     }
+#     filter {
+#       type    = "HEAD_REF"
+#       pattern = "^refs/heads/sibora-v2$"
+#     }
+#   }
+# }
+
 # Web CodeBuild Project  
 resource "aws_codebuild_project" "webpipe" {
   name         = "webpipe"
@@ -676,3 +695,20 @@ resource "aws_codebuild_project" "webpipe" {
     Project     = "project3"
   }
 }
+
+# CodeBuild Webhook for webpipe - will be configured manually through AWS Console
+# resource "aws_codebuild_webhook" "webpipe_webhook" {
+#   project_name = aws_codebuild_project.webpipe.name
+#   build_type   = "BUILD"
+#
+#   filter_group {
+#     filter {
+#       type    = "EVENT"
+#       pattern = "PUSH"
+#     }
+#     filter {
+#       type    = "HEAD_REF"
+#       pattern = "^refs/heads/sibora-v2$"
+#     }
+#   }
+# }
