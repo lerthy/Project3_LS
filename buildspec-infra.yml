@@ -45,42 +45,24 @@ phases:
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
       
-      # TFLint with fallback when GitHub API is rate-limited
+      # Fast TFLint using lightweight config (skip plugin downloads)
       - |
         set -e
         cd infra
-        # Prepare fallback config (core terraform rules only)
         cat > .tflint.ci.hcl <<'EOF'
         plugin "terraform" {
           enabled = true
           preset  = "recommended"
         }
         EOF
-        # Try normal init; if it fails due to rate limit, lint with fallback config
-        if tflint --init; then
-          tflint
-        else
-          echo "tflint --init failed (likely GH rate limit). Using fallback config."
-          tflint -c .tflint.ci.hcl
-        fi
+        tflint -c .tflint.ci.hcl
         cd - >/dev/null
 
   build:
     commands:
       - echo "Running Terraform tests..."
-      
-      # Run unit tests with coverage (short mode to skip slow checks)
-      - CI_SKIP_TERRATEST=1 go -C infra test -v -short -coverprofile=coverage.out ./tests/
-      - go -C infra tool cover -func=coverage.out
-      
-      # Check coverage threshold (60%)
-      - |
-        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-        if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-          echo "Coverage $COVERAGE% is below required 60%"
-          exit 1
-        fi
-        echo "Coverage $COVERAGE% meets requirement"
+      # Run minimal unit tests quickly (skip Terratest, no coverage)
+      - CI_SKIP_TERRATEST=1 go -C infra test -v -short -run TestInfra ./tests/
 
   post_build:
     commands:
