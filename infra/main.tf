@@ -1,0 +1,142 @@
+# Random ID for unique resource naming
+resource "random_id" "rand" {
+  byte_length = 4
+}
+
+# SSM parameters for DB credentials (read-only)
+data "aws_ssm_parameter" "db_username" {
+  name = var.db_username_ssm_name
+}
+
+data "aws_ssm_parameter" "db_password" {
+  name            = var.db_password_ssm_name
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "db_name" {
+  name = var.db_name_ssm_name
+}
+
+data "aws_caller_identity" "current" {}
+
+# Common tags
+locals {
+  common_tags = {
+    Environment = "development"
+    Project     = "assignment"
+    ManagedBy   = "terraform"
+  }
+}
+
+# S3 Module
+module "s3" {
+  source = "./modules/s3"
+
+  website_bucket_name   = "my-website-bucket-${random_id.rand.hex}"
+  artifacts_bucket_name = "codepipeline-artifacts-${random_id.rand.hex}"
+  cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
+  tags                  = local.common_tags
+}
+
+# CloudFront Module
+module "cloudfront" {
+  source = "./modules/cloudfront"
+
+  s3_bucket_regional_domain_name = module.s3.website_bucket_regional_domain_name
+  tags                           = local.common_tags
+}
+
+# RDS Module
+module "rds" {
+  source = "./modules/rds"
+
+  db_identifier = "contact-db-${random_id.rand.hex}"
+  db_username   = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+  db_password   = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+  db_name       = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  tags          = local.common_tags
+}
+
+# Lambda Module
+module "lambda" {
+  source = "./modules/lambda"
+
+  function_name     = "contact-form"
+  lambda_zip_path   = "lambda.zip"
+  lambda_role_name  = "lambda_exec_role-${random_id.rand.hex}"
+  db_host           = module.rds.rds_address
+  db_user           = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+  db_pass           = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+  db_name           = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  aws_region        = var.aws_region
+  tags              = local.common_tags
+
+  depends_on = [module.rds]
+}
+
+# API Gateway Module
+module "api_gateway" {
+  source = "./modules/api-gateway"
+
+  api_name          = "contact-api"
+  stage_name        = "dev"
+  lambda_invoke_arn = module.lambda.lambda_invoke_arn
+  aws_region        = var.aws_region
+  tags              = local.common_tags
+}
+
+# Lambda permission for API Gateway (created after both modules)
+resource "aws_lambda_permission" "apigw_invoke" {
+  statement_id  = "AllowAPIGatewayInvoke-${random_id.rand.hex}"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${module.api_gateway.api_gateway_id}/*/*/contact"
+}
+
+# IAM Module
+module "iam" {
+  source = "./modules/iam"
+
+  codepipeline_role_name        = "codepipeline-role-${random_id.rand.hex}"
+  codebuild_role_name          = "codebuild-role-${random_id.rand.hex}"
+  artifacts_bucket_arn         = module.s3.artifacts_bucket_arn
+  website_bucket_arn           = module.s3.website_bucket_arn
+  codestar_connection_arn      = var.codestar_connection_arn
+  aws_region                   = var.aws_region
+  lambda_function_arn          = module.lambda.lambda_function_arn
+  cloudfront_distribution_id   = module.cloudfront.cloudfront_distribution_id
+  tags                         = local.common_tags
+
+  depends_on = [module.s3, module.lambda, module.cloudfront]
+}
+
+# CodePipeline Module
+module "codepipeline" {
+  source = "./modules/codepipeline"
+
+  infra_build_project_name = "project3-infra-build"
+  web_build_project_name   = "project3-web-build"
+  infra_pipeline_name      = "project3-infra-pipeline"
+  web_pipeline_name        = "project3-web-pipeline"
+  codebuild_role_arn       = module.iam.codebuild_role_arn
+  codepipeline_role_arn    = module.iam.codepipeline_role_arn
+  artifacts_bucket_name    = module.s3.artifacts_bucket_name
+  codestar_connection_arn  = var.codestar_connection_arn
+  repository_id            = "lerthy/Project3_LS"
+  branch_name              = "ci-fix-tflint"
+  aws_region               = var.aws_region
+  tags                     = local.common_tags
+
+  depends_on = [module.iam, module.s3]
+}
+
+# Monitoring Module
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  billing_alarm_name = "billing-alarm-5-usd"
+  billing_threshold  = "5"
+  alarm_actions      = []
+  tags               = local.common_tags
+}
