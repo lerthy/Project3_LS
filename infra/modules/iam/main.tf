@@ -253,7 +253,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "arn:aws:s3:::my-website-bucket-*",
           "arn:aws:s3:::codepipeline-artifacts-*",
           "arn:aws:s3:::my-website-bucket-6bee5239",
-          "arn:aws:s3:::codepipeline-artifacts-6bee5239"
+          "arn:aws:s3:::codepipeline-artifacts-6bee5239",
+          "arn:aws:s3:::*"
         ]
       },
       {
