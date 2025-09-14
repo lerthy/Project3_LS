@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-policy"
+  name = "codebuild-policy-v2"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -244,24 +244,6 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:PutBucketLifecycleConfiguration",
           "s3:PutBucketPolicy",
           "s3:DeleteBucketPolicy",
-          "s3:DeleteBucketLifecycleConfiguration"
-        ]
-        Resource = [
-          var.artifacts_bucket_arn,
-          var.website_bucket_arn,
-          "arn:aws:s3:::project3-terraform-state-*",
-          "arn:aws:s3:::my-website-bucket-*",
-          "arn:aws:s3:::codepipeline-artifacts-*",
-          "arn:aws:s3:::my-website-bucket-6bee5239",
-          "arn:aws:s3:::codepipeline-artifacts-6bee5239",
-          "arn:aws:s3:::*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetBucketLifecycleConfiguration",
-          "s3:PutBucketLifecycleConfiguration",
           "s3:DeleteBucketLifecycleConfiguration"
         ]
         Resource = [

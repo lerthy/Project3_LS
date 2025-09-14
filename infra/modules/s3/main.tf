@@ -84,4 +84,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
       days_after_initiation = 1 # Clean up failed uploads
     }
   }
+
+  lifecycle {
+    ignore_changes = [rule]
+  }
 }
