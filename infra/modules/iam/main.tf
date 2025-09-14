@@ -258,6 +258,17 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "rds:Connect"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole",
+          "iam:GetRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:PassRole"
+        ]
+        Resource = "*"
       }
     ]
   })
