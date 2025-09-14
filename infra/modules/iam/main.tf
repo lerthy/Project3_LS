@@ -199,7 +199,10 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "cloudfront:DeleteDistribution",
           "cloudfront:CreateCloudFrontOriginAccessIdentity",
           "cloudfront:UpdateCloudFrontOriginAccessIdentity",
-          "cloudfront:DeleteCloudFrontOriginAccessIdentity"
+          "cloudfront:DeleteCloudFrontOriginAccessIdentity",
+          "cloudfront:ListTagsForResource",
+          "cloudfront:TagResource",
+          "cloudfront:UntagResource"
         ]
         Resource = "*"
       },
@@ -208,7 +211,10 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         Action = [
           "cloudwatch:DescribeAlarms",
           "cloudwatch:PutMetricAlarm",
-          "cloudwatch:DeleteAlarms"
+          "cloudwatch:DeleteAlarms",
+          "cloudwatch:ListTagsForResource",
+          "cloudwatch:TagResource",
+          "cloudwatch:UntagResource"
         ]
         Resource = "*"
       },
@@ -218,7 +224,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
           "ec2:DescribeSecurityGroups",
-          "ec2:DescribeAvailabilityZones"
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeVpcAttribute"
         ]
         Resource = "*"
       },
@@ -229,10 +236,14 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetBucketPublicAccessBlock",
           "s3:GetBucketVersioning",
           "s3:GetBucketLifecycleConfiguration",
+          "s3:GetBucketLocation",
+          "s3:GetBucketPolicy",
           "s3:PutBucketWebsite",
           "s3:PutBucketPublicAccessBlock",
           "s3:PutBucketVersioning",
-          "s3:PutBucketLifecycleConfiguration"
+          "s3:PutBucketLifecycleConfiguration",
+          "s3:PutBucketPolicy",
+          "s3:DeleteBucketPolicy"
         ]
         Resource = [
           var.artifacts_bucket_arn,
