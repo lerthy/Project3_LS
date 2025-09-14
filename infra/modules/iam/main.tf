@@ -249,7 +249,9 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         Resource = [
           var.artifacts_bucket_arn,
           var.website_bucket_arn,
-          "arn:aws:s3:::project3-terraform-state-*"
+          "arn:aws:s3:::project3-terraform-state-*",
+          "arn:aws:s3:::my-website-bucket-*",
+          "arn:aws:s3:::codepipeline-artifacts-*"
         ]
       },
       {
@@ -282,7 +284,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "lambda:DeleteFunction",
           "lambda:InvokeFunction",
           "lambda:AddPermission",
-          "lambda:RemovePermission"
+          "lambda:RemovePermission",
+          "lambda:GetFunctionCodeSigningConfig"
         ]
         Resource = "*"
       }
