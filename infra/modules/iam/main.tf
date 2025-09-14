@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-policy-${substr(sha256("updated-${timestamp()}"), 0, 8)}"
+  name = "codebuild-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
