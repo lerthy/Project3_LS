@@ -243,7 +243,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:PutBucketVersioning",
           "s3:PutBucketLifecycleConfiguration",
           "s3:PutBucketPolicy",
-          "s3:DeleteBucketPolicy"
+          "s3:DeleteBucketPolicy",
+          "s3:DeleteBucketLifecycleConfiguration"
         ]
         Resource = [
           var.artifacts_bucket_arn,
@@ -267,6 +268,21 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
           "iam:PassRole"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:GetFunction",
+          "lambda:ListVersionsByFunction",
+          "lambda:CreateFunction",
+          "lambda:UpdateFunctionCode",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:DeleteFunction",
+          "lambda:InvokeFunction",
+          "lambda:AddPermission",
+          "lambda:RemovePermission"
         ]
         Resource = "*"
       }
