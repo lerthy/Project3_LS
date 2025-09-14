@@ -17,3 +17,13 @@ output "web_build_project_name" {
   description = "Name of the web application CodeBuild project"
   value       = aws_codebuild_project.web_build.name
 }
+
+output "infra_webhook_url" {
+  description = "Webhook URL for infrastructure pipeline"
+  value       = aws_codepipeline_webhook.infra_webhook.url
+}
+
+output "web_webhook_url" {
+  description = "Webhook URL for web pipeline"
+  value       = aws_codepipeline_webhook.web_webhook.url
+}

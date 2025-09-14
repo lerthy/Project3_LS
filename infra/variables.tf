@@ -48,3 +48,10 @@ variable "codestar_connection_arn" {
   type        = string
   default     = ""
 }
+
+variable "github_webhook_secret" {
+  description = "GitHub webhook secret for pipeline triggers"
+  type        = string
+  sensitive   = true
+  default     = "your-webhook-secret-here"
+}

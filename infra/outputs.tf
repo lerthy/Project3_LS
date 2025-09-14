@@ -47,3 +47,13 @@ output "billing_alarm_name" {
   description = "Name of the billing alarm"
   value       = module.monitoring.billing_alarm_name
 }
+
+output "infra_webhook_url" {
+  description = "Webhook URL for infrastructure pipeline"
+  value       = module.codepipeline.infra_webhook_url
+}
+
+output "web_webhook_url" {
+  description = "Webhook URL for web pipeline"
+  value       = module.codepipeline.web_webhook_url
+}

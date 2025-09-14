@@ -96,6 +96,8 @@ resource "aws_codepipeline" "infra_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
+        DetectChanges    = "true"
+        OutputArtifactFormat = "CODE_ZIP"
       }
     }
   }
@@ -143,6 +145,8 @@ resource "aws_codepipeline" "web_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
+        DetectChanges    = "true"
+        OutputArtifactFormat = "CODE_ZIP"
       }
     }
   }
@@ -162,5 +166,50 @@ resource "aws_codepipeline" "web_pipeline" {
         ProjectName = aws_codebuild_project.web_build.name
       }
     }
+  }
+}
+
+
+# Webhook for Infrastructure Pipeline
+resource "aws_codepipeline_webhook" "infra_webhook" {
+  name            = "${var.infra_pipeline_name}-webhook"
+  authentication  = "GITHUB_HMAC"
+  target_action   = "Source"
+  target_pipeline = aws_codepipeline.infra_pipeline.name
+
+  authentication_configuration {
+    secret_token = var.github_webhook_secret
+  }
+
+  filter {
+    json_path    = "$.ref"
+    match_equals = "refs/heads/${var.branch_name}"
+  }
+
+  filter {
+    json_path    = "$.commits[*].modified[*]"
+    match_equals = "infra/**"
+  }
+}
+
+# Webhook for Web Pipeline
+resource "aws_codepipeline_webhook" "web_webhook" {
+  name            = "${var.web_pipeline_name}-webhook"
+  authentication  = "GITHUB_HMAC"
+  target_action   = "Source"
+  target_pipeline = aws_codepipeline.web_pipeline.name
+
+  authentication_configuration {
+    secret_token = var.github_webhook_secret
+  }
+
+  filter {
+    json_path    = "$.ref"
+    match_equals = "refs/heads/${var.branch_name}"
+  }
+
+  filter {
+    json_path    = "$.commits[*].modified[*]"
+    match_equals = "web/**"
   }
 }

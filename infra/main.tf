@@ -124,8 +124,11 @@ module "codepipeline" {
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
   codestar_connection_arn  = var.codestar_connection_arn
   repository_id            = "lerthy/Project3_LS"
-  branch_name              = "ci-fix-tflint"
+  branch_name              = "develop"
   aws_region               = var.aws_region
+  infra_path_filters       = ["infra/**/*"]
+  web_path_filters         = ["web/**/*"]
+  github_webhook_secret    = var.github_webhook_secret
   tags                     = local.common_tags
 
   depends_on = [module.iam, module.s3]

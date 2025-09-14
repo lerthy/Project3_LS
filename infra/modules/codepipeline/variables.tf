@@ -70,3 +70,21 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "infra_path_filters" {
+  description = "Path filters for infrastructure pipeline"
+  type        = list(string)
+  default     = ["infra/**/*"]
+}
+
+variable "web_path_filters" {
+  description = "Path filters for web pipeline"
+  type        = list(string)
+  default     = ["web/**/*"]
+}
+
+variable "github_webhook_secret" {
+  description = "GitHub webhook secret for pipeline triggers"
+  type        = string
+  sensitive   = true
+}
