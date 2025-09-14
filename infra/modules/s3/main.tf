@@ -65,24 +65,23 @@ resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" {
 }
 
 # S3 lifecycle rule to prevent storage accumulation
-# Temporarily commented out to resolve IAM permission issue
-# resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
-#   bucket = aws_s3_bucket.website.id
-# 
-#   rule {
-#     id     = "cleanup_old_versions"
-#     status = "Enabled"
-# 
-#     filter {
-#       prefix = "" # Apply to all objects
-#     }
-# 
-#     noncurrent_version_expiration {
-#       noncurrent_days = 7 # Delete old versions after 7 days
-#     }
-# 
-#     abort_incomplete_multipart_upload {
-#       days_after_initiation = 1 # Clean up failed uploads
-#     }
-#   }
-# }
+resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
+  bucket = aws_s3_bucket.website.id
+
+  rule {
+    id     = "cleanup_old_versions"
+    status = "Enabled"
+
+    filter {
+      prefix = "" # Apply to all objects
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 7 # Delete old versions after 7 days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1 # Clean up failed uploads
+    }
+  }
+}

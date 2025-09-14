@@ -60,7 +60,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 
 # IAM Role for CodeBuild
 resource "aws_iam_role" "codebuild_role" {
-  name = "${var.codebuild_role_name}-v2"
+  name = var.codebuild_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -75,20 +75,17 @@ resource "aws_iam_role" "codebuild_role" {
     ]
   })
 
-  lifecycle {
-    create_before_destroy = true
-  }
-
   tags = var.tags
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-policy-v2"
+  name = "codebuild-policy-${substr(sha256("updated-${timestamp()}"), 0, 8)}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Updated policy with S3 lifecycle permissions - v2
       {
         Effect = "Allow"
         Action = [
