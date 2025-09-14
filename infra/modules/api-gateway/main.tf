@@ -38,11 +38,12 @@ resource "aws_api_gateway_integration" "lambda_integration" {
 
 # Integrate OPTIONS to Lambda as well (Lambda returns CORS headers)
 resource "aws_api_gateway_integration" "lambda_integration_options" {
-  rest_api_id = aws_api_gateway_rest_api.contact_api.id
-  resource_id = aws_api_gateway_resource.contact_resource.id
-  http_method = aws_api_gateway_method.options_contact.http_method
-  type        = "AWS_PROXY"
-  uri         = var.lambda_invoke_arn
+  rest_api_id             = aws_api_gateway_rest_api.contact_api.id
+  resource_id             = aws_api_gateway_resource.contact_resource.id
+  http_method             = aws_api_gateway_method.options_contact.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
 }
 
 resource "aws_api_gateway_deployment" "contact_deployment" {

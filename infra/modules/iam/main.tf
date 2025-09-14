@@ -1,4 +1,4 @@
-# IAM Role for CodePipeline
+  # IAM Role for CodePipeline
 resource "aws_iam_role" "codepipeline_role" {
   name = var.codepipeline_role_name
 
@@ -112,6 +112,20 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
+          "s3:ListBucket",
+          "s3:GetBucketVersioning",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::project3-terraform-state-1757872273",
+          "arn:aws:s3:::project3-terraform-state-1757872273/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ssm:GetParameter",
           "ssm:PutParameter"
         ]
@@ -142,6 +156,89 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ec2:DetachNetworkInterface"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/terraform-state-lock"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter"
+        ]
+        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "apigateway:GET",
+          "apigateway:POST",
+          "apigateway:PUT",
+          "apigateway:DELETE",
+          "apigateway:PATCH"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudfront:GetDistribution",
+          "cloudfront:GetCloudFrontOriginAccessIdentity",
+          "cloudfront:CreateDistribution",
+          "cloudfront:UpdateDistribution",
+          "cloudfront:DeleteDistribution",
+          "cloudfront:CreateCloudFrontOriginAccessIdentity",
+          "cloudfront:UpdateCloudFrontOriginAccessIdentity",
+          "cloudfront:DeleteCloudFrontOriginAccessIdentity"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:PutMetricAlarm",
+          "cloudwatch:DeleteAlarms"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketWebsite",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:GetBucketVersioning",
+          "s3:GetBucketLifecycleConfiguration",
+          "s3:PutBucketWebsite",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:PutBucketVersioning",
+          "s3:PutBucketLifecycleConfiguration"
+        ]
+        Resource = [
+          var.artifacts_bucket_arn,
+          var.website_bucket_arn,
+          "arn:aws:s3:::project3-terraform-state-*"
+        ]
       },
       {
         Effect = "Allow"
