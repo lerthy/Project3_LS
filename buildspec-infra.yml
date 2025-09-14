@@ -91,6 +91,16 @@ phases:
           terraform -chdir=infra init
         fi
       
+      # Remove problematic S3 lifecycle configuration from state if it exists
+      - |
+        echo "Checking for S3 lifecycle configuration in state..."
+        if terraform -chdir=infra state list | grep -q "module.s3.aws_s3_bucket_lifecycle_configuration.website_lifecycle"; then
+          echo "Removing S3 lifecycle configuration from state to resolve permission issues..."
+          terraform -chdir=infra state rm module.s3.aws_s3_bucket_lifecycle_configuration.website_lifecycle || echo "State removal failed, continuing..."
+        else
+          echo "No S3 lifecycle configuration found in state"
+        fi
+      
       # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
       - terraform -chdir=infra plan -out=tfplan
       
