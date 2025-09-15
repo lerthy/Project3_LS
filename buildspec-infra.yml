@@ -91,14 +91,38 @@ phases:
           terraform -chdir=infra init
         fi
       
-      # Remove problematic S3 lifecycle configuration from state if it exists
+      # Remove problematic resources from state if they exist
       - |
-        echo "Checking for S3 lifecycle configuration in state..."
+        echo "Checking for problematic resources in state..."
+        
+        # Remove S3 lifecycle configuration
         if terraform -chdir=infra state list | grep -q "module.s3.aws_s3_bucket_lifecycle_configuration.website_lifecycle"; then
-          echo "Removing S3 lifecycle configuration from state to resolve permission issues..."
-          terraform -chdir=infra state rm module.s3.aws_s3_bucket_lifecycle_configuration.website_lifecycle || echo "State removal failed, continuing..."
+          echo "Removing S3 lifecycle configuration from state..."
+          terraform -chdir=infra state rm module.s3.aws_s3_bucket_lifecycle_configuration.website_lifecycle || echo "S3 lifecycle removal failed, continuing..."
         else
           echo "No S3 lifecycle configuration found in state"
+        fi
+        
+        # Remove CodeBuild projects to force recreation with new IAM role
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codebuild_project.infra_build"; then
+          echo "Removing CodeBuild infra project from state to force recreation..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codebuild_project.infra_build || echo "CodeBuild infra removal failed, continuing..."
+        fi
+        
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codebuild_project.web_build"; then
+          echo "Removing CodeBuild web project from state to force recreation..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codebuild_project.web_build || echo "CodeBuild web removal failed, continuing..."
+        fi
+        
+        # Remove CodePipelines as well since they depend on CodeBuild
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codepipeline.infra_pipeline"; then
+          echo "Removing CodePipeline infra pipeline from state..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codepipeline.infra_pipeline || echo "CodePipeline infra removal failed, continuing..."
+        fi
+        
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codepipeline.web_pipeline"; then
+          echo "Removing CodePipeline web pipeline from state..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codepipeline.web_pipeline || echo "CodePipeline web removal failed, continuing..."
         fi
       
       # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
