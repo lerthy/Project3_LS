@@ -65,7 +65,7 @@ phases:
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
 
       # Deploy static files to S3
-      - aws s3 sync web/static/ s3://$S3_BUCKET --delete
+      - aws s3 sync web/static/ s3://$S3_BUCKET
       
       # Package and deploy Lambda function (production-only dependencies)
       - cd web/lambda
