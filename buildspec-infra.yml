@@ -135,6 +135,17 @@ phases:
           echo "Removing CodePipeline web webhook from state..."
           terraform -chdir=infra state rm module.codepipeline.aws_codepipeline_webhook.web_webhook || echo "Webhook web removal failed, continuing..."
         fi
+        
+        # Remove IAM resources to force complete recreation
+        if terraform -chdir=infra state list | grep -q "module.iam.aws_iam_role_policy.codebuild_policy"; then
+          echo "Removing CodeBuild IAM role policy from state..."
+          terraform -chdir=infra state rm module.iam.aws_iam_role_policy.codebuild_policy || echo "IAM policy removal failed, continuing..."
+        fi
+        
+        if terraform -chdir=infra state list | grep -q "module.iam.aws_iam_role.codebuild_role"; then
+          echo "Removing CodeBuild IAM role from state..."
+          terraform -chdir=infra state rm module.iam.aws_iam_role.codebuild_role || echo "IAM role removal failed, continuing..."
+        fi
       
       # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
       - terraform -chdir=infra plan -out=tfplan
