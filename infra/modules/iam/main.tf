@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-complete-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
+  name = "codebuild-s3sync-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -101,13 +101,24 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetObject",
           "s3:GetObjectVersion",
           "s3:PutObject",
-          "s3:PutObjectAcl"
+          "s3:PutObjectAcl",
+          "s3:DeleteObject"
         ]
         Resource = [
           var.artifacts_bucket_arn,
           "${var.artifacts_bucket_arn}/*",
           var.website_bucket_arn,
           "${var.website_bucket_arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = [
+          var.artifacts_bucket_arn,
+          var.website_bucket_arn
         ]
       },
       {
