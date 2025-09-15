@@ -96,7 +96,7 @@ resource "aws_codepipeline" "infra_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
-        DetectChanges    = "true"
+        DetectChanges    = "false"
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -145,7 +145,7 @@ resource "aws_codepipeline" "web_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
-        DetectChanges    = "true"
+        DetectChanges    = "false"
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
