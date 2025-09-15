@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
+  name = "codebuild-full-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -299,7 +299,53 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         Action = [
           "codebuild:BatchGetProjects",
           "codebuild:BatchGetBuilds",
-          "codebuild:ListProjects"
+          "codebuild:ListProjects",
+          "codebuild:CreateProject",
+          "codebuild:UpdateProject",
+          "codebuild:DeleteProject",
+          "codebuild:ListBuildBatches",
+          "codebuild:StartBuild"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codepipeline:GetPipeline",
+          "codepipeline:GetPipelineState",
+          "codepipeline:GetPipelineExecution",
+          "codepipeline:ListPipelines",
+          "codepipeline:CreatePipeline",
+          "codepipeline:UpdatePipeline",
+          "codepipeline:DeletePipeline",
+          "codepipeline:ListTagsForResource",
+          "codepipeline:TagResource",
+          "codepipeline:UntagResource"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:GetCallerIdentity",
+          "sts:AssumeRole"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:GetLogEvents"
         ]
         Resource = "*"
       }
