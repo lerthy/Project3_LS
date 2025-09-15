@@ -293,6 +293,15 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "lambda:GetPolicy"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codebuild:BatchGetProjects",
+          "codebuild:BatchGetBuilds",
+          "codebuild:ListProjects"
+        ]
+        Resource = "*"
       }
     ]
   })
