@@ -7,8 +7,9 @@ export const handler = async (event) => {
   // CORS headers for all responses
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type,Accept,Origin,X-Requested-With",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Accept,Origin,X-Requested-With,Authorization,X-Api-Key",
+    "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+    "Access-Control-Max-Age": "86400",
     "Content-Type": "application/json"
   };
 
