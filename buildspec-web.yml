@@ -45,20 +45,12 @@ phases:
 
   post_build:
     commands:
-      - echo "Waiting for Terraform outputs in SSM, then deploying..."
+      - echo "Fetching Terraform outputs from SSM and deploying..."
 
-      # Wait (with timeout) for SSM parameters published by the infra pipeline
+      # Fetch SSM parameters published by the infra pipeline
       - |
         set -e
         echo "AWS region: ${AWS_REGION:-unset}"
-        REQUIRED_WAIT=240
-        echo "Hard wait enabled: sleeping for ${REQUIRED_WAIT}s before fetching SSM parameters..."
-        i=0
-        while [ "$i" -lt "$REQUIRED_WAIT" ]; do
-          sleep 10
-          i=$((i+10))
-          echo "Waited ${i}s/${REQUIRED_WAIT}s"
-        done
         echo "Fetching SSM parameters now..."
         BUCKET_NAME=$(aws ssm get-parameter --name "/project3/outputs/bucket_name" --query 'Parameter.Value' --output text)
         CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/project3/outputs/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
