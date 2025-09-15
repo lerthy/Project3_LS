@@ -60,7 +60,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 
 # IAM Role for CodeBuild
 resource "aws_iam_role" "codebuild_role" {
-  name = var.codebuild_role_name
+  name = "${var.codebuild_role_name}-v2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -74,6 +74,10 @@ resource "aws_iam_role" "codebuild_role" {
       }
     ]
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tags = var.tags
 }
