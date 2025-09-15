@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-s3sync-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
+  name = "codebuild-final-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -250,6 +250,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetBucketLifecycleConfiguration",
           "s3:GetBucketLocation",
           "s3:GetBucketPolicy",
+          "s3:ListBucket",
           "s3:PutBucketWebsite",
           "s3:PutBucketPublicAccessBlock",
           "s3:PutBucketVersioning",
