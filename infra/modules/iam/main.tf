@@ -79,7 +79,7 @@ resource "aws_iam_role" "codebuild_role" {
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-full-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
+  name = "codebuild-complete-permissions-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -320,7 +320,12 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "codepipeline:DeletePipeline",
           "codepipeline:ListTagsForResource",
           "codepipeline:TagResource",
-          "codepipeline:UntagResource"
+          "codepipeline:UntagResource",
+          "codepipeline:ListWebhooks",
+          "codepipeline:PutWebhook",
+          "codepipeline:RegisterWebhookWithThirdParty",
+          "codepipeline:DeregisterWebhookWithThirdParty",
+          "codepipeline:DeleteWebhook"
         ]
         Resource = "*"
       },

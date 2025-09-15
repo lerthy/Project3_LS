@@ -124,6 +124,17 @@ phases:
           echo "Removing CodePipeline web pipeline from state..."
           terraform -chdir=infra state rm module.codepipeline.aws_codepipeline.web_pipeline || echo "CodePipeline web removal failed, continuing..."
         fi
+        
+        # Remove webhooks as well
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codepipeline_webhook.infra_webhook"; then
+          echo "Removing CodePipeline infra webhook from state..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codepipeline_webhook.infra_webhook || echo "Webhook infra removal failed, continuing..."
+        fi
+        
+        if terraform -chdir=infra state list | grep -q "module.codepipeline.aws_codepipeline_webhook.web_webhook"; then
+          echo "Removing CodePipeline web webhook from state..."
+          terraform -chdir=infra state rm module.codepipeline.aws_codepipeline_webhook.web_webhook || echo "Webhook web removal failed, continuing..."
+        fi
       
       # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
       - terraform -chdir=infra plan -out=tfplan
