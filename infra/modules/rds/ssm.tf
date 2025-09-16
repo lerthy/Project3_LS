@@ -1,6 +1,3 @@
-# SSM Parameters for RDS Module Outputs
-# Following naming convention: /rds/<output_name>
-
 resource "aws_ssm_parameter" "rds_endpoint" {
   name  = "/rds/rds_endpoint"
   type  = "String"

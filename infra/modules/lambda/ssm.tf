@@ -1,6 +1,3 @@
-# SSM Parameters for Lambda Module Outputs
-# Following naming convention: /lambda/<output_name>
-
 resource "aws_ssm_parameter" "lambda_function_name" {
   name  = "/lambda/lambda_function_name"
   type  = "String"

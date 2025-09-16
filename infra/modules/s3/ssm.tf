@@ -1,6 +1,3 @@
-# SSM Parameters for S3 Module Outputs
-# Following naming convention: /s3/<output_name>
-
 resource "aws_ssm_parameter" "website_bucket_name" {
   name  = "/s3/website_bucket_name"
   type  = "String"

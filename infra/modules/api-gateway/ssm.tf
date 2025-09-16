@@ -1,6 +1,3 @@
-# SSM Parameters for API Gateway Module Outputs
-# Following naming convention: /api-gateway/<output_name>
-
 resource "aws_ssm_parameter" "api_gateway_id" {
   name  = "/api-gateway/api_gateway_id"
   type  = "String"

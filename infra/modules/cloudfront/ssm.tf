@@ -1,6 +1,3 @@
-# SSM Parameters for CloudFront Module Outputs
-# Following naming convention: /cloudfront/<output_name>
-
 resource "aws_ssm_parameter" "cloudfront_distribution_id" {
   name  = "/cloudfront/cloudfront_distribution_id"
   type  = "String"
