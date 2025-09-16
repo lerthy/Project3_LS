@@ -44,7 +44,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
         Action = [
           "codestar-connections:UseConnection"
         ]
-        Resource = var.codestar_connection_arn != "" ? var.codestar_connection_arn : "*"
+        Resource = var.codestar_connection_arn
       },
       {
         Effect = "Allow"
