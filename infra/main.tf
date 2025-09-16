@@ -1,8 +1,3 @@
-# Random ID for unique resource naming
-resource "random_id" "rand" {
-  byte_length = 4
-}
-
 # SSM parameters for DB credentials (read-only)
 data "aws_ssm_parameter" "db_username" {
   name = var.db_username_ssm_name
@@ -32,8 +27,8 @@ locals {
 module "s3" {
   source = "./modules/s3"
 
-  website_bucket_name   = "my-website-bucket-${random_id.rand.hex}"
-  artifacts_bucket_name = "codepipeline-artifacts-${random_id.rand.hex}"
+  website_bucket_name   = "my-website-bucket-project3"
+  artifacts_bucket_name = "codepipeline-artifacts-project3"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
   tags                  = local.common_tags
 }
@@ -50,7 +45,7 @@ module "cloudfront" {
 module "rds" {
   source = "./modules/rds"
 
-  db_identifier = "contact-db-${random_id.rand.hex}"
+  db_identifier = "contact-db-project3"
   db_username   = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
   db_password   = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
   db_name       = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
@@ -63,7 +58,7 @@ module "lambda" {
 
   function_name     = "contact-form"
   lambda_zip_path   = "lambda.zip"
-  lambda_role_name  = "lambda_exec_role-${random_id.rand.hex}"
+  lambda_role_name  = "lambda_exec_role_project3"
   aws_region        = var.aws_region
   tags              = local.common_tags
 
@@ -83,7 +78,7 @@ module "api_gateway" {
 
 # Lambda permission for API Gateway (created after both modules)
 resource "aws_lambda_permission" "apigw_invoke" {
-  statement_id  = "AllowAPIGatewayInvoke-${random_id.rand.hex}"
+  statement_id  = "AllowAPIGatewayInvoke-project3"
   action        = "lambda:InvokeFunction"
   function_name = module.lambda.lambda_function_name
   principal     = "apigateway.amazonaws.com"
@@ -94,8 +89,8 @@ resource "aws_lambda_permission" "apigw_invoke" {
 module "iam" {
   source = "./modules/iam"
 
-  codepipeline_role_name        = "codepipeline-role-${random_id.rand.hex}"
-  codebuild_role_name          = "codebuild-role-${random_id.rand.hex}"
+  codepipeline_role_name        = "codepipeline-role-project3"
+  codebuild_role_name          = "codebuild-role-project3"
   artifacts_bucket_arn         = module.s3.artifacts_bucket_arn
   website_bucket_arn           = module.s3.website_bucket_arn
   codestar_connection_arn      = var.codestar_connection_arn
@@ -119,8 +114,8 @@ module "codepipeline" {
   codepipeline_role_arn    = module.iam.codepipeline_role_arn
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
   codestar_connection_arn  = var.codestar_connection_arn
-  repository_id            = "lerthy/Project3_LS"
-  branch_name              = "develop"
+  repository_id            = var.repository_id
+  branch_name              = var.branch_name
   aws_region               = var.aws_region
   infra_path_filters       = ["infra/**/*"]
   web_path_filters         = ["web/**/*"]

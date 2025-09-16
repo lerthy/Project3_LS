@@ -55,3 +55,15 @@ variable "github_webhook_secret" {
   sensitive   = true
   default     = "your-webhook-secret-here"
 }
+
+variable "repository_id" {
+  description = "GitHub repository ID in format owner/repo"
+  type        = string
+  default     = "lerthy/Project3_LS"
+}
+
+variable "branch_name" {
+  description = "Git branch name to monitor for changes"
+  type        = string
+  default     = "develop"
+}

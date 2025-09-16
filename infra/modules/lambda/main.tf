@@ -53,21 +53,16 @@ resource "aws_lambda_function" "contact" {
   timeout          = var.timeout
   source_code_hash = fileexists(var.lambda_zip_path) ? filebase64sha256(var.lambda_zip_path) : null
 
-  environment {
-    variables = {
-      AWS_REGION = var.aws_region
-      # Database credentials now retrieved from SSM parameters in the function
-      # No longer passing sensitive data as environment variables
-    }
-  }
+  # environment {
+  #   variables = {
+  #     # Database credentials now retrieved from SSM parameters in the function
+  #     # No longer passing sensitive data as environment variables
+  #   }
+  # }
 
   tags = var.tags
 }
 
 # Lambda permission is handled in the main configuration to avoid circular dependency
-
-resource "random_id" "rand" {
-  byte_length = 4
-}
 
 data "aws_caller_identity" "current" {}
