@@ -1,5 +1,41 @@
-// Security note: Secrets (DB creds, S3 bucket name, etc.) must be stored in AWS Secrets Manager or SSM Parameter Store, not hardcoded.
+// Security note: Database credentials are retrieved from AWS SSM Parameter Store, not environment variables.
 import { Client } from "pg";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+
+// Initialize SSM client
+const ssmClient = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+// Cache for database credentials to avoid repeated SSM calls
+let dbCredentials = null;
+
+// Function to get database credentials from SSM
+async function getDbCredentials() {
+  if (dbCredentials) {
+    return dbCredentials;
+  }
+
+  try {
+    // Get database parameters from SSM
+    const [dbHost, dbUser, dbPass, dbName] = await Promise.all([
+      ssmClient.send(new GetParameterCommand({ Name: "/rds/rds_address" })),
+      ssmClient.send(new GetParameterCommand({ Name: "/rds/db_username" })),
+      ssmClient.send(new GetParameterCommand({ Name: "/rds/db_password", WithDecryption: true })),
+      ssmClient.send(new GetParameterCommand({ Name: "/rds/db_name" }))
+    ]);
+
+    dbCredentials = {
+      host: dbHost.Parameter.Value,
+      user: dbUser.Parameter.Value,
+      password: dbPass.Parameter.Value,
+      database: dbName.Parameter.Value
+    };
+
+    return dbCredentials;
+  } catch (error) {
+    console.error("Failed to retrieve database credentials from SSM:", error);
+    throw new Error("Database configuration error");
+  }
+}
 
 export const handler = async (event) => {
   console.log("Lambda invoked with:", JSON.stringify(event, null, 2));
@@ -79,12 +115,15 @@ export const handler = async (event) => {
       };
     }
 
+    // Get database credentials from SSM
+    const credentials = await getDbCredentials();
+
     // Connect to database
     const client = new Client({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
+      host: credentials.host,
+      user: credentials.user,
+      password: credentials.password,
+      database: credentials.database,
       port: 5432,
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,

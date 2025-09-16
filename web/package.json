@@ -11,7 +11,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "build": "npm run lint && npm run test",
-    "deploy": "aws s3 sync static/ s3://$S3_BUCKET_NAME --delete"
+    "deploy": "S3_BUCKET=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && aws s3 sync static/ s3://$S3_BUCKET --delete"
   },
   "keywords": ["aws", "website", "contact-form"],
   "author": "Polymath Services",

@@ -64,10 +64,6 @@ module "lambda" {
   function_name     = "contact-form"
   lambda_zip_path   = "lambda.zip"
   lambda_role_name  = "lambda_exec_role-${random_id.rand.hex}"
-  db_host           = module.rds.rds_address
-  db_user           = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-  db_pass           = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
-  db_name           = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
   aws_region        = var.aws_region
   tags              = local.common_tags
 
@@ -111,9 +107,9 @@ module "iam" {
   depends_on = [module.s3, module.lambda, module.cloudfront]
 }
 
-# CodePipeline Module
+# CodePipeline Module (now in cicd folder at root)
 module "codepipeline" {
-  source = "./modules/codepipeline"
+  source = "../cicd"
 
   infra_build_project_name = "project3-infra-build"
   web_build_project_name   = "project3-web-build"

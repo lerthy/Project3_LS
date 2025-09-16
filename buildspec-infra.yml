@@ -160,8 +160,10 @@ phases:
         fi
 
       # Export Terraform outputs to SSM for the Web pipeline to consume
+      # NOTE: This is now redundant as modules create their own SSM parameters
+      # but keeping for backward compatibility during transition
       - |
-        echo "Publishing Terraform outputs to SSM..."
+        echo "Publishing Terraform outputs to SSM (legacy format)..."
         set -e
         TF_OUTPUT_JSON=$(terraform -chdir=infra output -json || echo '{}')
         BUCKET_NAME=$(echo "$TF_OUTPUT_JSON" | jq -r '.bucket_name.value // empty')
@@ -184,7 +186,7 @@ phases:
         if [ -n "$LAMBDA_FUNCTION_ARN" ]; then
           aws ssm put-parameter --name "/project3/outputs/lambda_function_arn" --type String --overwrite --value "$LAMBDA_FUNCTION_ARN"
         fi
-        echo "Outputs published to SSM."
+        echo "Legacy outputs published to SSM. Module-specific SSM parameters are now primary."
 
 artifacts:
   files:

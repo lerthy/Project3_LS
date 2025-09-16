@@ -27,27 +27,6 @@ variable "timeout" {
   default     = 10
 }
 
-variable "db_host" {
-  description = "Database host"
-  type        = string
-}
-
-variable "db_user" {
-  description = "Database username"
-  type        = string
-}
-
-variable "db_pass" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_name" {
-  description = "Database name"
-  type        = string
-}
-
 variable "aws_region" {
   description = "AWS region"
   type        = string

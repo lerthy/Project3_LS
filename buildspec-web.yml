@@ -47,19 +47,20 @@ phases:
     commands:
       - echo "Fetching Terraform outputs from SSM and deploying..."
 
-      # Fetch SSM parameters published by the infra pipeline
+      # Fetch SSM parameters from module-specific parameters
       - |
         set -e
         echo "AWS region: ${AWS_REGION:-unset}"
-        echo "Fetching SSM parameters now..."
-        BUCKET_NAME=$(aws ssm get-parameter --name "/project3/outputs/bucket_name" --query 'Parameter.Value' --output text)
-        CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/project3/outputs/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
-        API_GATEWAY_URL=$(aws ssm get-parameter --name "/project3/outputs/api_gateway_url" --query 'Parameter.Value' --output text)
-        LAMBDA_FUNCTION_ARN=$(aws ssm get-parameter --name "/project3/outputs/lambda_function_arn" --query 'Parameter.Value' --output text)
-        # Extract function name from ARN (format: arn:aws:lambda:region:account:function:name)
-        LAMBDA_FUNCTION_NAME=$(echo "$LAMBDA_FUNCTION_ARN" | sed 's/.*function://')
+        echo "Fetching SSM parameters from module-specific stores..."
+        
+        # Fetch from module-specific SSM parameters
+        BUCKET_NAME=$(aws ssm get-parameter --name "/s3/website_bucket_name" --query 'Parameter.Value' --output text)
+        CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/cloudfront/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
+        API_GATEWAY_URL=$(aws ssm get-parameter --name "/api-gateway/api_gateway_url" --query 'Parameter.Value' --output text)
+        LAMBDA_FUNCTION_NAME=$(aws ssm get-parameter --name "/lambda/lambda_function_name" --query 'Parameter.Value' --output text)
+        
         export S3_BUCKET="$BUCKET_NAME"
-        echo "Resolved from SSM: S3_BUCKET=$S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID, API_GATEWAY_URL=$API_GATEWAY_URL, LAMBDA_FUNCTION_NAME=$LAMBDA_FUNCTION_NAME"
+        echo "Resolved from module SSM parameters: S3_BUCKET=$S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID, API_GATEWAY_URL=$API_GATEWAY_URL, LAMBDA_FUNCTION_NAME=$LAMBDA_FUNCTION_NAME"
 
       # Replace API URL in config file
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js

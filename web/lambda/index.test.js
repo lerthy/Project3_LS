@@ -1,5 +1,14 @@
 import { handler } from './index.js';
 
+// Mock AWS SDK SSM Client
+const mockSSMSend = jest.fn();
+jest.mock('@aws-sdk/client-ssm', () => ({
+  SSMClient: jest.fn(() => ({
+    send: mockSSMSend
+  })),
+  GetParameterCommand: jest.fn((params) => params)
+}));
+
 jest.mock('pg', () => {
   const connect = jest.fn();
   const end = jest.fn();
@@ -12,6 +21,7 @@ jest.mock('pg', () => {
   });
   // expose for per-test control
   global.__pgMock = { connect, end, query };
+  global.__ssmMock = { send: mockSSMSend };
   return {
     Client: jest.fn(() => ({ connect, end, query }))
   };
@@ -29,6 +39,31 @@ const baseBody = {
 };
 
 describe('Lambda handler', () => {
+  beforeEach(() => {
+    // Setup SSM mock responses for database credentials
+    global.__ssmMock.send.mockImplementation(async (command) => {
+      const paramName = command.Name;
+      switch (paramName) {
+        case '/rds/rds_address':
+          return { Parameter: { Value: 'test-host' } };
+        case '/rds/db_username':
+          return { Parameter: { Value: 'test-user' } };
+        case '/rds/db_password':
+          return { Parameter: { Value: 'test-password' } };
+        case '/rds/db_name':
+          return { Parameter: { Value: 'test-db' } };
+        default:
+          throw new Error(`Unexpected SSM parameter: ${paramName}`);
+      }
+    });
+    
+    // Reset all mocks
+    global.__pgMock.connect.mockClear();
+    global.__pgMock.end.mockClear();
+    global.__pgMock.query.mockClear();
+    global.__ssmMock.send.mockClear();
+  });
+
   it('handles OPTIONS preflight', async () => {
     const res = await handler({ httpMethod: 'OPTIONS' });
     expect(res.statusCode).toBe(200);
@@ -57,11 +92,6 @@ describe('Lambda handler', () => {
   });
 
   it('inserts contact and returns success', async () => {
-    process.env.DB_HOST = 'host';
-    process.env.DB_USER = 'user';
-    process.env.DB_PASS = 'pass';
-    process.env.DB_NAME = 'db';
-
     const res = await handler({ httpMethod: 'POST', body: JSON.stringify(baseBody) });
     expect(res.statusCode).toBe(200);
     const payload = JSON.parse(res.body);

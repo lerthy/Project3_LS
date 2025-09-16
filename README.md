@@ -28,18 +28,46 @@ web/buildspec-web.yml # CodeBuild spec for Web pipeline
 
 ### Secrets and Parameters (Security)
 
-Do not hardcode secrets. This project reads DB credentials from AWS Systems Manager Parameter Store by default.
+This project uses **AWS Systems Manager Parameter Store** for configuration management and secrets. There are two types of parameters:
 
-Create the following SSM parameters (use SecureString for password):
+#### **1. Input Parameters (Pre-deployment)**
+Create these SSM parameters before running Terraform:
 
 - `/project3/db/username` (String) — e.g., `appuser`
 - `/project3/db/password` (SecureString) — strong password
 - `/project3/db/name` (String) — e.g., `contacts`
 
-Terraform variables allow overriding via `-var` flags, but if left empty the module reads from SSM:
+#### **2. Output Parameters (Auto-created by Terraform)**
+Terraform modules automatically create these parameters from their outputs:
 
-- `db_username`, `db_password`, `db_name` (optional overrides)
-- `db_username_ssm_name`, `db_password_ssm_name`, `db_name_ssm_name` (defaults set)
+**S3 Module:**
+- `/s3/website_bucket_name` - Website bucket name
+- `/s3/website_bucket_arn` - Website bucket ARN
+- `/s3/artifacts_bucket_name` - Artifacts bucket name
+
+**CloudFront Module:**
+- `/cloudfront/cloudfront_distribution_id` - Distribution ID
+- `/cloudfront/cloudfront_domain_name` - CloudFront domain
+
+**API Gateway Module:**
+- `/api-gateway/api_gateway_id` - API Gateway ID
+- `/api-gateway/api_gateway_url` - API invoke URL
+
+**Lambda Module:**
+- `/lambda/lambda_function_name` - Function name
+- `/lambda/lambda_function_arn` - Function ARN
+
+**RDS Module:**
+- `/rds/rds_endpoint` - Database endpoint
+- `/rds/db_username` - Database username
+- `/rds/db_password` (SecureString) - Database password
+- `/rds/db_name` - Database name
+
+#### **Validation**
+Use the included script to validate all parameters:
+```bash
+./validate-ssm-parameters.sh
+```
 
 ### CI/CD Pipelines
 
@@ -61,11 +89,16 @@ Trigger: push to `develop` branch (configure your CI to watch this branch).
 
 ### Required CI Environment Variables
 
-Set these for the Web pipeline:
+**No environment variables are required!** 🎉
 
-- `S3_BUCKET_NAME` — from Terraform output `bucket_name`
-- `CLOUDFRONT_DISTRIBUTION_ID` — the distribution ID created by Terraform
-- `API_GATEWAY_URL` — from Terraform output `api_gateway_url`
+The pipelines now automatically retrieve all required values from SSM Parameter Store:
+
+- **Infrastructure Pipeline**: Creates SSM parameters from Terraform outputs
+- **Web Pipeline**: Retrieves deployment targets from module-specific SSM parameters:
+  - S3 bucket name: `/s3/website_bucket_name`
+  - CloudFront distribution ID: `/cloudfront/cloudfront_distribution_id`
+  - API Gateway URL: `/api-gateway/api_gateway_url`
+  - Lambda function name: `/lambda/lambda_function_name`
 
 For Terraform pipeline, ensure your build role has permissions for S3, CF, APIGW, Lambda, RDS, SSM, IAM.
 
