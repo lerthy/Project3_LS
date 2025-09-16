@@ -96,7 +96,7 @@ resource "aws_codepipeline" "infra_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
-        DetectChanges    = "false"
+        DetectChanges    = "true"
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -145,7 +145,7 @@ resource "aws_codepipeline" "web_pipeline" {
         ConnectionArn    = var.codestar_connection_arn
         FullRepositoryId = var.repository_id
         BranchName       = var.branch_name
-        DetectChanges    = "false"
+        DetectChanges    = "true"
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -170,7 +170,27 @@ resource "aws_codepipeline" "web_pipeline" {
 }
 
 
-// Removed infra webhook to prevent unintended triggers on web-only changes
+# Webhook for Infrastructure Pipeline
+resource "aws_codepipeline_webhook" "infra_webhook" {
+  name            = "${var.infra_pipeline_name}-webhook"
+  authentication  = "GITHUB_HMAC"
+  target_action   = "Source"
+  target_pipeline = aws_codepipeline.infra_pipeline.name
+
+  authentication_configuration {
+    secret_token = var.github_webhook_secret
+  }
+
+  filter {
+    json_path    = "$.ref"
+    match_equals = "refs/heads/${var.branch_name}"
+  }
+
+  filter {
+    json_path    = "$.commits[*].modified[*]"
+    match_equals = "infra/**"
+  }
+}
 
 # Webhook for Web Pipeline
 resource "aws_codepipeline_webhook" "web_webhook" {
@@ -190,17 +210,6 @@ resource "aws_codepipeline_webhook" "web_webhook" {
 
   filter {
     json_path    = "$.commits[*].modified[*]"
-    match_equals = "web/**"
-  }
-  
-  # Also match newly added and removed files in web/
-  filter {
-    json_path    = "$.commits[*].added[*]"
-    match_equals = "web/**"
-  }
-
-  filter {
-    json_path    = "$.commits[*].removed[*]"
     match_equals = "web/**"
   }
 }
