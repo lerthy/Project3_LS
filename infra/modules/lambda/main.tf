@@ -66,8 +66,4 @@ resource "aws_lambda_function" "contact" {
 
 # Lambda permission is handled in the main configuration to avoid circular dependency
 
-resource "random_id" "rand" {
-  byte_length = 4
-}
-
 data "aws_caller_identity" "current" {}
