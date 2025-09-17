@@ -128,12 +128,13 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         Effect = "Allow"
         Action = [
           "s3:ListBucket",
+          "s3:ListBucketVersions",
+          "s3:ListObjectsV2",
           "s3:GetBucketVersioning",
           "s3:GetBucketLocation",
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
-          "s3:ListBucketVersions",
           "s3:GetObjectVersion"
         ]
         Resource = [
