@@ -131,14 +131,21 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:ListBucketVersions",
           "s3:ListObjectsV2",
           "s3:GetBucketVersioning",
-          "s3:GetBucketLocation",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::project3-terraform-state-1757872273"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
           "s3:GetObjectVersion"
         ]
         Resource = [
-          "arn:aws:s3:::project3-terraform-state-1757872273",
           "arn:aws:s3:::project3-terraform-state-1757872273/*"
         ]
       },
