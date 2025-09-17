@@ -27,8 +27,8 @@ locals {
 module "s3" {
   source = "./modules/s3"
 
-  website_bucket_name   = "my-website-bucket-project3"
-  artifacts_bucket_name = "codepipeline-artifacts-project3"
+  website_bucket_name   = "my-website-bucket-project3-fresh"
+  artifacts_bucket_name = "codepipeline-artifacts-project3-fresh"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
   tags                  = local.common_tags
 }
