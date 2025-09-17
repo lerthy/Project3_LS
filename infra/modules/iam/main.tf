@@ -192,7 +192,14 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ssm:PutParameter",
           "ssm:DeleteParameter"
         ]
-        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*"
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/api-gateway/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/cloudfront/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/rds/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/lambda/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/s3/*"
+        ]
       },
       {
         Effect = "Allow"
@@ -254,6 +261,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetBucketLifecycleConfiguration",
           "s3:GetBucketLocation",
           "s3:GetBucketPolicy",
+          "s3:GetBucketAcl",
           "s3:ListBucket",
           "s3:PutBucketWebsite",
           "s3:PutBucketPublicAccessBlock",
