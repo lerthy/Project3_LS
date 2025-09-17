@@ -196,6 +196,21 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/s3/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/cloudfront/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/api-gateway/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/lambda/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/rds/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "apigateway:GET",
           "apigateway:POST",
           "apigateway:PUT",
