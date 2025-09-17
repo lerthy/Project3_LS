@@ -115,7 +115,7 @@ module "codepipeline" {
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
   codestar_connection_arn  = var.codestar_connection_arn
   repository_id            = "lerthy/Project3_LS"
-  branch_name              = "develop"
+  branch_name              = "feature/aws-infrastructure-working"
   aws_region               = var.aws_region
   infra_path_filters       = ["infra/**/*"]
   web_path_filters         = ["web/**/*"]
