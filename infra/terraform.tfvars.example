@@ -1,0 +1,15 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Database Configuration
+db_name     = "contacts"
+db_username = "appuser"
+db_password = "" # Leave empty to use SSM parameters
+
+# SSM Parameter Names (used when corresponding variables are empty)
+db_username_ssm_name = "/project3/db/username"
+db_password_ssm_name = "/project3/db/password"
+db_name_ssm_name     = "/project3/db/name"
+
+# CodeStar Connection
+codestar_connection_arn = "arn:aws:codeconnections:us-east-1:264765155009:connection/53a37d01-3b7e-44d8-84bb-37c5947aec8b"
