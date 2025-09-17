@@ -1,13 +1,14 @@
-import { handler } from './index.js';
-
 // Mock AWS SDK SSM Client
-const mockSSMSend = jest.fn();
-jest.mock('@aws-sdk/client-ssm', () => ({
-  SSMClient: jest.fn(() => ({
-    send: mockSSMSend
-  })),
-  GetParameterCommand: jest.fn((params) => params)
-}));
+jest.mock('@aws-sdk/client-ssm', () => {
+  const mockSSMSend = jest.fn();
+  global.__ssmMock = { send: mockSSMSend };
+  return {
+    SSMClient: jest.fn(() => ({
+      send: mockSSMSend
+    })),
+    GetParameterCommand: jest.fn((params) => params)
+  };
+});
 
 jest.mock('pg', () => {
   const connect = jest.fn();
@@ -21,11 +22,12 @@ jest.mock('pg', () => {
   });
   // expose for per-test control
   global.__pgMock = { connect, end, query };
-  global.__ssmMock = { send: mockSSMSend };
   return {
     Client: jest.fn(() => ({ connect, end, query }))
   };
 });
+
+import { handler } from './index.js';
 
 const baseBody = {
   name: 'Jane Doe',
