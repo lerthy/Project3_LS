@@ -190,7 +190,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath",
           "ssm:PutParameter",
-          "ssm:DeleteParameter"
+          "ssm:DeleteParameter",
+          "ssm:DescribeParameters"
         ]
         Resource = [
           "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*",
@@ -262,6 +263,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetBucketLocation",
           "s3:GetBucketPolicy",
           "s3:GetBucketAcl",
+          "s3:GetBucketCORS",
           "s3:ListBucket",
           "s3:PutBucketWebsite",
           "s3:PutBucketPublicAccessBlock",
