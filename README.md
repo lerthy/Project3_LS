@@ -2,7 +2,7 @@
 
 This repository implements two CI/CD pipelines (Infrastructure and Web) that provision AWS infrastructure with Terraform and deploy a two-page static website with a contact form backed by API Gateway → Lambda → RDS (PostgreSQL).
 
-Both pipelines enforce linting and unit test coverage thresholds./////
+Both pipelines enforce linting and unit test coverage thresholds.///////
 
 ### Repository Structure
 
