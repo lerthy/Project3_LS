@@ -134,7 +134,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetBucketLocation"
         ]
         Resource = [
-          "arn:aws:s3:::project3-terraform-state-1757872273"
+          "arn:aws:s3:::project3-terraform-state-1758100191"
         ]
       },
       {
@@ -146,7 +146,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "s3:GetObjectVersion"
         ]
         Resource = [
-          "arn:aws:s3:::project3-terraform-state-1757872273/*"
+          "arn:aws:s3:::project3-terraform-state-1758100191/*"
         ]
       },
       {

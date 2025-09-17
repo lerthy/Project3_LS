@@ -6,7 +6,7 @@ env:
     AWS_REGION: us-east-1
     TF_VAR_aws_region: us-east-1
     # Backend configuration (set these in CodeBuild environment variables)
-    TF_STATE_BUCKET: "project3-terraform-state-1757872273"
+    TF_STATE_BUCKET: "project3-terraform-state-1758100191"
     TF_STATE_KEY: "project3/terraform.tfstate"
     TF_STATE_REGION: "us-east-1"
     TF_STATE_TABLE: "terraform-state-lock"
