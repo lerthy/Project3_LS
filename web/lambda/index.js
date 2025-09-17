@@ -2,8 +2,10 @@
 import { Client } from "pg";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
-// Initialize SSM client
-const ssmClient = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
+// Initialize SSM client with explicit region
+const ssmClient = new SSMClient({ 
+  region: 'us-east-1' // Explicitly set to us-east-1
+});
 
 // Cache for database credentials to avoid repeated SSM calls
 let dbCredentials = null;
@@ -15,6 +17,8 @@ async function getDbCredentials() {
   }
 
   try {
+    console.log("Retrieving database credentials from SSM...");
+    
     // Get database parameters from SSM
     const [dbHost, dbUser, dbPass, dbName] = await Promise.all([
       ssmClient.send(new GetParameterCommand({ Name: "/rds/rds_address" })),
@@ -22,6 +26,11 @@ async function getDbCredentials() {
       ssmClient.send(new GetParameterCommand({ Name: "/rds/db_password", WithDecryption: true })),
       ssmClient.send(new GetParameterCommand({ Name: "/rds/db_name" }))
     ]);
+
+    console.log("SSM parameters retrieved successfully");
+    console.log("DB Host:", dbHost.Parameter.Value);
+    console.log("DB User:", dbUser.Parameter.Value);
+    console.log("DB Name:", dbName.Parameter.Value);
 
     dbCredentials = {
       host: dbHost.Parameter.Value,
@@ -33,6 +42,7 @@ async function getDbCredentials() {
     return dbCredentials;
   } catch (error) {
     console.error("Failed to retrieve database credentials from SSM:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     throw new Error("Database configuration error");
   }
 }

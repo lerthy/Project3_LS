@@ -24,7 +24,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       {
         Effect = "Allow"
         Action = [
@@ -42,19 +42,18 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
       {
         Effect = "Allow"
         Action = [
-          "codestar-connections:UseConnection"
-        ]
-        Resource = var.codestar_connection_arn
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "codebuild:BatchGetBuilds",
           "codebuild:StartBuild"
         ]
         Resource = "*"
       }
-    ]
+    ], var.codestar_connection_arn != "" ? [{
+      Effect = "Allow"
+      Action = [
+        "codestar-connections:UseConnection"
+      ]
+      Resource = var.codestar_connection_arn
+    }] : [])
   })
 }
 

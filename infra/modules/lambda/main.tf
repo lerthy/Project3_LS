@@ -55,9 +55,9 @@ resource "aws_lambda_function" "contact" {
 
   environment {
     variables = {
-      AWS_REGION = var.aws_region
       # Database credentials now retrieved from SSM parameters in the function
       # No longer passing sensitive data as environment variables
+      # AWS_REGION is automatically available in Lambda runtime
     }
   }
 
