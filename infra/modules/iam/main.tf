@@ -129,9 +129,12 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         Action = [
           "s3:ListBucket",
           "s3:GetBucketVersioning",
+          "s3:GetBucketLocation",
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:ListBucketVersions",
+          "s3:GetObjectVersion"
         ]
         Resource = [
           "arn:aws:s3:::project3-terraform-state-1757872273",
@@ -178,7 +181,8 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:DeleteItem",
-          "dynamodb:DescribeTable"
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable"
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/terraform-state-lock"
       },
