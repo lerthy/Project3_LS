@@ -441,6 +441,37 @@ async function getDbCredentials() {
 
 ### Reliability improvements (code refs)
 
+#### Warm Standby Architecture Decision
+
+The decision to implement a warm standby architecture was based on the following requirements and considerations:
+
+1. **Recovery Time Objective (RTO)**: 
+   - Requirement: 4 hours maximum downtime allowed
+   - Warm standby provides faster recovery compared to cold standby or backup/restore
+   - Pre-provisioned infrastructure reduces deployment time during failover
+
+2. **Recovery Point Objective (RPO)**:
+   - Requirement: Maximum 1 hour of data loss acceptable
+   - Continuous replication of data to standby region meets this requirement
+   - S3 cross-region replication for static content
+   - Database replication for dynamic data
+
+3. **Traffic Pattern Analysis**:
+   - Steady, predictable traffic pattern
+   - Non-spiky workload suits warm standby's cost-effectiveness
+   - Lower cost compared to active-active while meeting RPO/RTO
+
+4. **Cost-Benefit Analysis**:
+   - Warm standby provides optimal balance between recovery speed and cost
+   - Standby resources can run on smaller instances to reduce costs
+   - No need for complex active-active synchronization
+
+5. **Operational Complexity**:
+   - Simpler than active-active architecture
+   - Automated failover through Route53 health checks
+   - Clear, well-defined failover process
+   - Easier to test and maintain
+
 #### Summary of Reliability Improvements
 
 We implemented a warm standby architecture and enhanced reliability with the following changes:
