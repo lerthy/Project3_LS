@@ -439,6 +439,71 @@ async function getDbCredentials() {
 - `infra/modules/lambda/main.tf` (no DLQ)
 - `infra/modules/rds/main.tf` (backup/deletion flags)
 
+### Reliability improvements (code refs)
+- Lambda reserved concurrency: `infra/modules/lambda/main.tf` lines 109-111
+```109:111:infra/modules/lambda/main.tf
+# Reserve concurrency to prevent thundering herds and protect DB
+reserved_concurrent_executions = 5
+```
+- Lambda DLQ and invoke config: `infra/modules/lambda/main.tf` lines 130-145
+```130:145:infra/modules/lambda/main.tf
+resource "aws_sqs_queue" "lambda_dlq" {
+  name = "contact-form-dlq"
+  tags = var.tags
+}
+
+resource "aws_lambda_event_invoke_config" "contact_eic" {
+  function_name = aws_lambda_function.contact.function_name
+  destination_config { on_failure { destination = aws_sqs_queue.lambda_dlq.arn } }
+  maximum_retry_attempts       = 2
+  maximum_event_age_in_seconds = 3600
+}
+```
+- Lambda errors alarm: `infra/modules/monitoring/main.tf` lines 25-42
+```25:42:infra/modules/monitoring/main.tf
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "lambda-contact-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_actions       = var.alarm_actions
+  dimensions = { FunctionName = var.lambda_function_name }
+}
+```
+- Lambda p95 duration alarm: `infra/modules/monitoring/main.tf` lines 44-60
+```44:60:infra/modules/monitoring/main.tf
+resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
+  alarm_name          = "lambda-contact-duration-p95"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "p95"
+  threshold           = 3000
+  alarm_actions       = var.alarm_actions
+  dimensions = { FunctionName = var.lambda_function_name }
+}
+```
+- API Gateway 5XX alarm: `infra/modules/monitoring/main.tf` lines 62-79
+```62:79:infra/modules/monitoring/main.tf
+resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
+  alarm_name          = "apigw-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_actions       = var.alarm_actions
+  dimensions = { ApiId = var.api_gateway_id, Stage = var.api_gateway_stage, Resource = "/contact", Method = "POST" }
+}
+```
 ---
 
 ## 4) Performance Efficiency
