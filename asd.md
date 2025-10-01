@@ -53,9 +53,9 @@
 ## 2) Security
 ### Current state
 - S3 website bucket blocks public access; CloudFront OAI policy restricts reads.
-- Lambda uses basic execution role and scoped SSM read policy for DB params.
 - API Gateway POST/OPTIONS without auth; RDS SG allows 0.0.0.0/0 to 5432 (demo).
 - Terraform remote state in S3 with DynamoDB lock and encryption.
+- DB credentials stored in SSM Parameter Store (`/rds/db_username`, `/rds/db_password` SecureString, `/rds/db_name`, `/rds/rds_address`) and read by Lambda at runtime.
 
 ### Gaps
 - RDS publicly accessible SG; Lambda not in VPC; no KMS CMKs for S3/RDS.
@@ -303,12 +303,8 @@ IAM narrowed S3 bucket resources: `infra/modules/iam/main.tf` lines 276-279
         ]
 ```
 
-### Secrets management (current vs improved)
-- Current state: DB credentials stored in SSM Parameter Store (`/rds/db_username`, `/rds/db_password` SecureString, `/rds/db_name`, `/rds/rds_address`) and read by Lambda at runtime.
-- Improvements: Added AWS Secrets Manager secret for DB credentials with 30‑day automatic rotation; Lambda now prefers Secrets Manager (with SSM fallback), and IAM updated to allow secret reads.
 
-Implemented resources and code references:
-- Secrets Manager secret and version: `infra/main.tf` lines 58-75
+Secrets Manager secret and version: `infra/main.tf` lines 58-75
 ```58:75:infra/main.tf
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "project3/db-credentials"
