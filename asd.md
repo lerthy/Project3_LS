@@ -90,10 +90,21 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "website_encryptio
 }
 ```
 ```79:95:infra/modules/s3/main.tf
-resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" { /* Enabled */ }
+resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" {
+  bucket = aws_s3_bucket.codepipeline_artifacts.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_artifacts_encryption" {
   bucket = aws_s3_bucket.codepipeline_artifacts.id
-  rule { apply_server_side_encryption_by_default { sse_algorithm = "AES256" } }
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
 }
 ```
 ```44:47:infra/modules/cloudfront/main.tf
@@ -102,31 +113,117 @@ viewer_certificate {
   minimum_protocol_version       = "TLSv1.2_2021"
 }
 ```
-```20:36:infra/modules/cloudfront/main.tf
+```20:37:infra/modules/cloudfront/main.tf
 default_cache_behavior {
-  ...
+  allowed_methods  = ["GET", "HEAD"]
+  cached_methods   = ["GET", "HEAD"]
+  target_origin_id = "s3-origin"
+
+  forwarded_values {
+    query_string = false
+    cookies {
+      forward = "none"
+    }
+  }
+
+  viewer_protocol_policy     = "redirect-to-https"
+  min_ttl                    = 0
+  default_ttl                = 3600
+  max_ttl                    = 86400
   response_headers_policy_id = "60669652-455b-4ae9-85a4-c4c02393f86c" # AWSManagedSecurityHeadersPolicy
 }
 ```
-```101:153:infra/modules/api-gateway/main.tf
-resource "aws_api_gateway_stage" "contact_stage" { access_log_settings { ... } }
-resource "aws_cloudwatch_log_group" "api_gw_logs" { retention_in_days = 14 }
-resource "aws_api_gateway_method_settings" "all" { method_path = "*/*" settings { logging_level = "INFO" throttling_burst_limit = 5 throttling_rate_limit = 10 } }
-resource "aws_wafv2_web_acl" "apigw_acl" { scope = "REGIONAL" rule { managed_rule_group_statement { name = "AWSManagedRulesCommonRuleSet" } } }
-resource "aws_wafv2_web_acl_association" "apigw_acl_assoc" { resource_arn = aws_api_gateway_stage.contact_stage.arn }
+```101:123:infra/modules/api-gateway/main.tf
+resource "aws_api_gateway_stage" "contact_stage" {
+  deployment_id = aws_api_gateway_deployment.contact_deployment.id
+  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
+  stage_name    = var.stage_name
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
+    format = jsonencode({
+      requestId               = "$context.requestId",
+      ip                      = "$context.identity.sourceIp",
+      caller                  = "$context.identity.caller",
+      user                    = "$context.identity.user",
+      requestTime             = "$context.requestTime",
+      httpMethod              = "$context.httpMethod",
+      resourcePath            = "$context.resourcePath",
+      status                  = "$context.status",
+      protocol                = "$context.protocol",
+      responseLength          = "$context.responseLength",
+      integrationStatus       = "$context.integration.status",
+      integrationError        = "$context.integrationErrorMessage"
+    })
+  }
+}
+```
+```125:145:infra/modules/api-gateway/main.tf
+resource "aws_cloudwatch_log_group" "api_gw_logs" {
+  name              = "/apigw/${aws_api_gateway_rest_api.contact_api.id}/${var.stage_name}"
+  retention_in_days = 14
+  tags              = var.tags
+}
+
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  stage_name  = aws_api_gateway_stage.contact_stage.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled        = true
+    logging_level          = "INFO"
+    data_trace_enabled     = true
+    throttling_burst_limit = 5
+    throttling_rate_limit  = 10
+  }
+}
+```
+```147:181:infra/modules/api-gateway/main.tf
+resource "aws_wafv2_web_acl" "apigw_acl" {
+  name        = "apigw-basic-acl"
+  description = "Basic protections for API Gateway"
+  scope       = "REGIONAL"
+  default_action {
+    allow {}
+  }
+  rule {
+    name     = "AWS-AWSManagedRulesCommonRuleSet"
+    priority = 1
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "apigw-acl"
+    sampled_requests_enabled   = true
+  }
+  tags = var.tags
+}
+
+resource "aws_wafv2_web_acl_association" "apigw_acl_assoc" {
+  resource_arn = aws_api_gateway_stage.contact_stage.arn
+  web_acl_arn  = aws_wafv2_web_acl.apigw_acl.arn
+}
 ```
 ```16:41:infra/modules/lambda/main.tf
 resource "aws_iam_role_policy_attachment" "lambda_vpc_access" { policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole" }
 data "aws_vpc" "default" { default = true }
 resource "aws_security_group" "lambda_sg" { egress { from_port = 0 to_port = 0 protocol = "-1" cidr_blocks = ["0.0.0.0/0"] } }
 ```
-```46:66:infra/modules/lambda/main.tf
-resource "aws_lambda_function" "contact" {
-  ...
-  vpc_config {
-    subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
-    security_group_ids = [aws_security_group.lambda_sg.id]
-  }
+```89:101:infra/modules/lambda/main.tf
+vpc_config {
+  subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
+  security_group_ids = [aws_security_group.lambda_sg.id]
 }
 ```
 ```33:41:infra/modules/rds/main.tf
