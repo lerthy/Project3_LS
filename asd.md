@@ -76,43 +76,36 @@
 - `infra/backend.tf` (S3 backend with DynamoDB lock)
 
 ### Improvements made (code refs)
-- S3 website bucket versioning: `infra/modules/s3/main.tf` lines 9-15
-- S3 website bucket encryption: `infra/modules/s3/main.tf` lines 17-26
-- S3 artifacts versioning: `infra/modules/s3/main.tf` lines 79-84
-- S3 artifacts encryption: `infra/modules/s3/main.tf` lines 86-95
-- CloudFront security headers: `infra/modules/cloudfront/main.tf` lines 20-37
-- CloudFront TLS minimum: `infra/modules/cloudfront/main.tf` lines 45-48
-- API Gateway access logs: `infra/modules/api-gateway/main.tf` lines 101-123
-- API GW log group: `infra/modules/api-gateway/main.tf` lines 125-130
-- API GW method throttling: `infra/modules/api-gateway/main.tf` lines 132-145
-- WAFv2 WebACL (managed rules): `infra/modules/api-gateway/main.tf` lines 147-175
-- WAF association: `infra/modules/api-gateway/main.tf` lines 178-181
-- Lambda VPC access policy: `infra/modules/lambda/main.tf` lines 21-25
-- Lambda security group + VPC: `infra/modules/lambda/main.tf` lines 39-52, 89-92
-- RDS SG ingress from Lambda: `infra/modules/rds/main.tf` lines 6-17
-- RDS private/encrypted + SG attach: `infra/modules/rds/main.tf` lines 47-58
-- IAM narrowed S3 bucket resources: `infra/modules/iam/main.tf` lines 276-279
-```9:26:infra/modules/s3/main.tf
+S3 website bucket versioning: `infra/modules/s3/main.tf` lines 9-15
+```9:15:infra/modules/s3/main.tf
 resource "aws_s3_bucket_versioning" "website_versioning" {
   bucket = aws_s3_bucket.website.id
   versioning_configuration {
     status = "Enabled"
   }
 }
+```
 
+S3 website bucket encryption: `infra/modules/s3/main.tf` lines 17-26
+```17:26:infra/modules/s3/main.tf
 resource "aws_s3_bucket_server_side_encryption_configuration" "website_encryption" {
   bucket = aws_s3_bucket.website.id
   rule { apply_server_side_encryption_by_default { sse_algorithm = "AES256" } }
 }
 ```
-```79:95:infra/modules/s3/main.tf
+
+S3 artifacts versioning: `infra/modules/s3/main.tf` lines 79-84
+```79:84:infra/modules/s3/main.tf
 resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" {
   bucket = aws_s3_bucket.codepipeline_artifacts.id
   versioning_configuration {
     status = "Enabled"
   }
 }
+```
 
+S3 artifacts encryption: `infra/modules/s3/main.tf` lines 86-95
+```86:95:infra/modules/s3/main.tf
 resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_artifacts_encryption" {
   bucket = aws_s3_bucket.codepipeline_artifacts.id
 
@@ -123,12 +116,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
   }
 }
 ```
-```44:47:infra/modules/cloudfront/main.tf
-viewer_certificate {
-  cloudfront_default_certificate = true
-  minimum_protocol_version       = "TLSv1.2_2021"
-}
-```
+
+CloudFront security headers policy: `infra/modules/cloudfront/main.tf` lines 20-37
 ```20:37:infra/modules/cloudfront/main.tf
 default_cache_behavior {
   allowed_methods  = ["GET", "HEAD"]
@@ -149,6 +138,16 @@ default_cache_behavior {
   response_headers_policy_id = "60669652-455b-4ae9-85a4-c4c02393f86c" # AWSManagedSecurityHeadersPolicy
 }
 ```
+
+CloudFront minimum TLS version: `infra/modules/cloudfront/main.tf` lines 45-48
+```45:48:infra/modules/cloudfront/main.tf
+viewer_certificate {
+  cloudfront_default_certificate = true
+  minimum_protocol_version       = "TLSv1.2_2021"
+}
+```
+
+API Gateway access logs: `infra/modules/api-gateway/main.tf` lines 101-123
 ```101:123:infra/modules/api-gateway/main.tf
 resource "aws_api_gateway_stage" "contact_stage" {
   deployment_id = aws_api_gateway_deployment.contact_deployment.id
@@ -174,6 +173,8 @@ resource "aws_api_gateway_stage" "contact_stage" {
   }
 }
 ```
+
+API Gateway log group and method throttling: `infra/modules/api-gateway/main.tf` lines 125-145
 ```125:145:infra/modules/api-gateway/main.tf
 resource "aws_cloudwatch_log_group" "api_gw_logs" {
   name              = "/apigw/${aws_api_gateway_rest_api.contact_api.id}/${var.stage_name}"
@@ -195,6 +196,8 @@ resource "aws_api_gateway_method_settings" "all" {
   }
 }
 ```
+
+WAFv2 WebACL and association: `infra/modules/api-gateway/main.tf` lines 147-181
 ```147:181:infra/modules/api-gateway/main.tf
 resource "aws_wafv2_web_acl" "apigw_acl" {
   name        = "apigw-basic-acl"
@@ -231,30 +234,69 @@ resource "aws_wafv2_web_acl_association" "apigw_acl_assoc" {
   web_acl_arn  = aws_wafv2_web_acl.apigw_acl.arn
 }
 ```
-```16:41:infra/modules/lambda/main.tf
-resource "aws_iam_role_policy_attachment" "lambda_vpc_access" { policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole" }
-data "aws_vpc" "default" { default = true }
-resource "aws_security_group" "lambda_sg" { egress { from_port = 0 to_port = 0 protocol = "-1" cidr_blocks = ["0.0.0.0/0"] } }
+
+Lambda VPC access policy: `infra/modules/lambda/main.tf` lines 21-25
+```21:25:infra/modules/lambda/main.tf
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
 ```
-```89:101:infra/modules/lambda/main.tf
+
+Lambda security group: `infra/modules/lambda/main.tf` lines 39-52
+```39:52:infra/modules/lambda/main.tf
+resource "aws_security_group" "lambda_sg" {
+  name_prefix = "lambda-sg-"
+  description = "Security group for Lambda to access RDS"
+  vpc_id      = data.aws_vpc.default.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, { Name = "lambda-sg" })
+}
+```
+
+Lambda VPC config on function: `infra/modules/lambda/main.tf` lines 89-92
+```89:92:infra/modules/lambda/main.tf
 vpc_config {
   subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
   security_group_ids = [aws_security_group.lambda_sg.id]
 }
 ```
-```33:41:infra/modules/rds/main.tf
+
+RDS SG ingress from Lambda SG: `infra/modules/rds/main.tf` lines 6-17
+```6:17:infra/modules/rds/main.tf
 resource "aws_security_group" "rds_ingress" {
-  ingress { from_port = 5432 to_port = 5432 protocol = "tcp" security_groups = [var.allowed_sg_id] }
+  name_prefix = "rds-ingress-5432-"
+  description = "Allow inbound to Postgres from Lambda SG"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    from_port                = 5432
+    to_port                  = 5432
+    protocol                 = "tcp"
+    security_groups          = [var.allowed_sg_id]
+    description              = "Allow Postgres from Lambda security group"
+  }
 }
 ```
-```48:66:infra/modules/rds/main.tf
+
+RDS private/encrypted + SG attach: `infra/modules/rds/main.tf` lines 48-58
+```48:58:infra/modules/rds/main.tf
 resource "aws_db_instance" "contact_db" {
   storage_encrypted   = var.storage_encrypted
   publicly_accessible = var.publicly_accessible
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]
 }
 ```
-```276:284:infra/modules/iam/main.tf
+
+IAM narrowed S3 bucket resources: `infra/modules/iam/main.tf` lines 276-279
+```276:279:infra/modules/iam/main.tf
         Resource = [
           var.artifacts_bucket_arn,
           var.website_bucket_arn
