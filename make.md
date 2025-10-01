@@ -597,30 +597,6 @@ resource "aws_route53_record" "api_secondary" {
   set_identifier = "secondary"
 }
 
-#### Summary of Reliability Improvements
-
-We implemented a warm standby architecture and enhanced reliability with the following changes:
-
-- **Created standby RDS module in a different region:**
-  - Folder: `infra/modules/rds-standby/`
-  - Files: `main.tf`, `variables.tf`, `outputs.tf`
-  - Purpose: Deploys a scaled-down standby PostgreSQL RDS instance in `us-west-2`.
-
-- **Enabled S3 cross-region replication for static assets:**
-  - File: `infra/modules/s3/replication.tf`
-  - Purpose: Replicates website bucket to standby region for DR.
-
-- **Configured Route53 DNS failover for APIs:**
-  - File: `infra/modules/route53/failover.tf`
-  - Supporting files: `variables.tf`, `outputs.tf`
-  - Purpose: Automated DNS failover between primary and standby API endpoints.
-
-- **Documented the warm standby setup and failover process:**
-  - File: `WARM-STANDBY-README.md` (project root)
-  - Purpose: Instructions and validation steps for disaster recovery.
-
-All new modules follow Terraform best practices with variables, outputs, and clear separation of primary/standby resources.
-
 ---
 
 - Lambda reserved concurrency: `infra/modules/lambda/main.tf` lines 109-111
