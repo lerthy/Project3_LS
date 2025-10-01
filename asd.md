@@ -303,6 +303,124 @@ IAM narrowed S3 bucket resources: `infra/modules/iam/main.tf` lines 276-279
         ]
 ```
 
+### Secrets management (current vs improved)
+- Current state: DB credentials stored in SSM Parameter Store (`/rds/db_username`, `/rds/db_password` SecureString, `/rds/db_name`, `/rds/rds_address`) and read by Lambda at runtime.
+- Improvements: Added AWS Secrets Manager secret for DB credentials with 30‑day automatic rotation; Lambda now prefers Secrets Manager (with SSM fallback), and IAM updated to allow secret reads.
+
+Implemented resources and code references:
+- Secrets Manager secret and version: `infra/main.tf` lines 58-75
+```58:75:infra/main.tf
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name        = "project3/db-credentials"
+  description = "Database credentials for contact form"
+  tags        = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials_version" {
+  secret_id     = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    username = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+    password = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+    host     = module.rds.rds_address
+    database = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+    port     = module.rds.rds_port
+  })
+  depends_on = [module.rds]
+}
+```
+- Rotation function and rotation rule: `infra/main.tf` lines 76-103
+```76:103:infra/main.tf
+resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotation" {
+  name           = "project3-rds-rotation"
+  application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser"
+  capabilities   = ["CAPABILITY_NAMED_IAM"]
+  parameters = {
+    functionName        = "project3-rds-rotation"
+    vpcSubnetIds        = join(",", data.aws_subnets.default_vpc_subnets.ids)
+    vpcSecurityGroupIds = module.lambda.lambda_security_group_id
+  }
+  semantic_version = "1.1.188"
+  tags             = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_rotation" "db_rotation" {
+  secret_id           = aws_secretsmanager_secret.db_credentials.id
+  rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.rds_rotation.outputs["RotationLambdaARN"]
+  rotation_rules { automatically_after_days = 30 }
+  depends_on = [aws_secretsmanager_secret_version.db_credentials_version]
+}
+```
+- Lambda environment + IAM for secret read: `infra/modules/lambda/main.tf` lines 56-66, 70-90
+```56:66:infra/modules/lambda/main.tf
+environment {
+  variables = {
+    ENVIRONMENT  = "development"
+    DB_SECRET_ARN = var.db_secret_arn
+  }
+}
+```
+```70:90:infra/modules/lambda/main.tf
+resource "aws_iam_role_policy" "lambda_secrets_policy" {
+  name = "lambda-secrets-access"
+  role = aws_iam_role.lambda_exec.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = ["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],
+      Resource = var.db_secret_arn
+    }]
+  })
+}
+```
+- Lambda code reads from Secrets Manager with SSM fallback: `web/lambda/index.js` lines 1-18, 21-40, 44-74
+```1:18:web/lambda/index.js
+// Security note: Database credentials are retrieved from AWS SSM Parameter Store, not environment variables.
+import { Client } from "pg";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+
+// Initialize AWS clients
+const region = process.env.AWS_REGION || 'us-east-1';
+const ssmClient = new SSMClient({ region });
+const secretsClient = new SecretsManagerClient({ region });
+```
+```21:40:web/lambda/index.js
+// Cache for database credentials to avoid repeated SSM calls
+let dbCredentials = null;
+
+// Function to get database credentials (Secrets Manager preferred, fallback to SSM)
+async function getDbCredentials() {
+  if (dbCredentials) {
+    return dbCredentials;
+  }
+
+  try {
+    const secretArn = process.env.DB_SECRET_ARN;
+    if (secretArn) {
+      const secretData = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretArn }));
+      const secret = JSON.parse(secretData.SecretString || '{}');
+      dbCredentials = { host: secret.host, user: secret.username, password: secret.password, database: secret.database };
+    } else {
+      // Fallback to SSM parameters
+```
+```44:74:web/lambda/index.js
+      const [dbHost, dbUser, dbPass, dbName] = await Promise.all([
+        ssmClient.send(new GetParameterCommand({ Name: "/rds/rds_address" })),
+        ssmClient.send(new GetParameterCommand({ Name: "/rds/db_username" })),
+        ssmClient.send(new GetParameterCommand({ Name: "/rds/db_password", WithDecryption: true })),
+        ssmClient.send(new GetParameterCommand({ Name: "/rds/db_name" }))
+      ]);
+      dbCredentials = { host: dbHost.Parameter.Value, user: dbUser.Parameter.Value, password: dbPass.Parameter.Value, database: dbName.Parameter.Value };
+    }
+    return dbCredentials;
+  } catch (error) {
+    console.error("Failed to retrieve database credentials:", error);
+    throw new Error("Database configuration error");
+  }
+}
+```
+
 ---
 
 ## 3) Reliability
