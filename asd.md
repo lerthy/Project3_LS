@@ -76,6 +76,22 @@
 - `infra/backend.tf` (S3 backend with DynamoDB lock)
 
 ### Improvements made (code refs)
+- S3 website bucket versioning: `infra/modules/s3/main.tf` lines 9-15
+- S3 website bucket encryption: `infra/modules/s3/main.tf` lines 17-26
+- S3 artifacts versioning: `infra/modules/s3/main.tf` lines 79-84
+- S3 artifacts encryption: `infra/modules/s3/main.tf` lines 86-95
+- CloudFront security headers: `infra/modules/cloudfront/main.tf` lines 20-37
+- CloudFront TLS minimum: `infra/modules/cloudfront/main.tf` lines 45-48
+- API Gateway access logs: `infra/modules/api-gateway/main.tf` lines 101-123
+- API GW log group: `infra/modules/api-gateway/main.tf` lines 125-130
+- API GW method throttling: `infra/modules/api-gateway/main.tf` lines 132-145
+- WAFv2 WebACL (managed rules): `infra/modules/api-gateway/main.tf` lines 147-175
+- WAF association: `infra/modules/api-gateway/main.tf` lines 178-181
+- Lambda VPC access policy: `infra/modules/lambda/main.tf` lines 21-25
+- Lambda security group + VPC: `infra/modules/lambda/main.tf` lines 39-52, 89-92
+- RDS SG ingress from Lambda: `infra/modules/rds/main.tf` lines 6-17
+- RDS private/encrypted + SG attach: `infra/modules/rds/main.tf` lines 47-58
+- IAM narrowed S3 bucket resources: `infra/modules/iam/main.tf` lines 276-279
 ```9:26:infra/modules/s3/main.tf
 resource "aws_s3_bucket_versioning" "website_versioning" {
   bucket = aws_s3_bucket.website.id
