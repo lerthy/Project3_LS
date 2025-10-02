@@ -155,7 +155,7 @@ module "iam" {
 
   codepipeline_role_name        = "codepipeline-role-project3"
   codebuild_role_name          = "codebuild-role-project3"
-  artifacts_bucket_arn         = module.s3.artifacts_bucket_arn
+  artifacts_bucket_arn         = module.s3.codepipeline_artifacts_bucket_arn
   website_bucket_arn           = module.s3.website_bucket_arn
   codestar_connection_arn      = var.codestar_connection_arn
   aws_region                   = var.aws_region

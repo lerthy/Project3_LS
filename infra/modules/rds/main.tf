@@ -165,6 +165,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Security but Free Tier friendly
   storage_encrypted   = var.storage_encrypted
+  kms_key_id         = var.storage_encrypted ? aws_kms_key.rds_encryption.arn : null
   publicly_accessible = var.publicly_accessible
   deletion_protection = var.deletion_protection
 

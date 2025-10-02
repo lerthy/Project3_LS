@@ -14,14 +14,16 @@ resource "aws_s3_bucket_versioning" "website_versioning" {
   }
 }
 
-# Default encryption for website bucket
+# Default encryption for website bucket with customer-managed KMS key
 resource "aws_s3_bucket_server_side_encryption_configuration" "website_encryption" {
   bucket = aws_s3_bucket.website.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3_website_encryption.arn
     }
+    bucket_key_enabled = true  # Cost optimization for KMS
   }
 }
 
@@ -83,14 +85,16 @@ resource "aws_s3_bucket_versioning" "codepipeline_artifacts_versioning" {
   }
 }
 
-# Default encryption for artifacts bucket
+# Default encryption for artifacts bucket with customer-managed KMS key
 resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_artifacts_encryption" {
   bucket = aws_s3_bucket.codepipeline_artifacts.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3_artifacts_encryption.arn
     }
+    bucket_key_enabled = true  # Cost optimization for KMS
   }
 }
 

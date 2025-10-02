@@ -17,10 +17,7 @@ output "approval_role_arn" {
   value       = aws_iam_role.approval_role.arn
 }
 
-output "drift_detector_role_arn" {
-  description = "ARN of the IAM role for drift detection"
-  value       = aws_iam_role.drift_detector_role.arn
-}
+# Note: drift_detector_role removed - resource doesn't exist
 
 output "operational_dashboard_url" {
   description = "URL of the operational excellence dashboard"
@@ -53,7 +50,4 @@ output "web_build_alarm_name" {
   value       = aws_cloudwatch_metric_alarm.web_build_failures.alarm_name
 }
 
-output "drift_detection_schedule_arn" {
-  description = "ARN of the drift detection schedule"
-  value       = aws_cloudwatch_event_rule.drift_detection_schedule.arn
-}
+# Note: drift_detection_schedule removed - resource doesn't exist

@@ -28,6 +28,17 @@ class ContactForm {
            'https://your-api-gateway-url.execute-api.eu-north-1.amazonaws.com/dev/contact';
   }
 
+  getApiKey() {
+    // Try to get API key from config
+    if (window.API_CONFIG && window.API_CONFIG.API_KEY && 
+        !window.API_CONFIG.API_KEY.includes('{{')) {
+      return window.API_CONFIG.API_KEY;
+    }
+    
+    // Fallback for development
+    return window.API_CONFIG?.FALLBACK_API_KEY || 'development-api-key';
+  }
+
   async handleSubmit(event) {
     event.preventDefault();
     
@@ -96,7 +107,8 @@ class ContactForm {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-API-Key': this.getApiKey()
       },
       body: JSON.stringify(data)
     });

@@ -17,6 +17,7 @@ resource "aws_api_gateway_method" "post_contact" {
   resource_id   = aws_api_gateway_resource.contact_resource.id
   http_method   = "POST"
   authorization = "NONE"
+  api_key_required = true
 }
 
 # Add OPTIONS method for CORS preflight
@@ -78,6 +79,61 @@ resource "aws_api_gateway_integration_response" "options_integration_response" {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
     "method.response.header.Access-Control-Max-Age"       = "'86400'"
   }
+}
+
+# API Key for authentication
+resource "aws_api_gateway_api_key" "contact_api_key" {
+  name        = "contact-form-api-key"
+  description = "API key for contact form submissions"
+  enabled     = true
+  
+  tags = merge(var.tags, {
+    Name = "contact-form-api-key"
+    Type = "api-authentication"
+  })
+}
+
+# Usage Plan for rate limiting and throttling
+resource "aws_api_gateway_usage_plan" "contact_usage_plan" {
+  name         = "contact-form-usage-plan"
+  description  = "Usage plan for contact form API"
+
+  api_stages {
+    api_id = aws_api_gateway_rest_api.contact_api.id
+    stage  = aws_api_gateway_stage.contact_stage.stage_name
+  }
+
+  quota_settings {
+    limit  = 1000    # 1000 requests per day
+    period = "DAY"
+  }
+
+  throttle_settings {
+    rate_limit  = 10   # 10 requests per second
+    burst_limit = 20   # 20 burst requests
+  }
+
+  tags = var.tags
+}
+
+# Associate API key with usage plan
+resource "aws_api_gateway_usage_plan_key" "contact_usage_plan_key" {
+  key_id        = aws_api_gateway_api_key.contact_api_key.id
+  key_type      = "API_KEY"
+  usage_plan_id = aws_api_gateway_usage_plan.contact_usage_plan.id
+}
+
+# Store API key in SSM Parameter Store for frontend access
+resource "aws_ssm_parameter" "api_key" {
+  name        = "/api-gateway/api_key"
+  description = "API key for contact form authentication"
+  type        = "SecureString"
+  value       = aws_api_gateway_api_key.contact_api_key.value
+
+  tags = merge(var.tags, {
+    Name = "api-gateway-key"
+    Type = "api-authentication"
+  })
 }
 
 resource "aws_api_gateway_deployment" "contact_deployment" {
@@ -154,21 +210,6 @@ resource "aws_cloudwatch_log_group" "api_gw_logs" {
   name              = "/apigw/${aws_api_gateway_rest_api.contact_api.id}/${var.stage_name}"
   retention_in_days = var.log_retention_days
   tags              = var.tags
-}
-
-# Method-level settings for logging, metrics, and throttling
-resource "aws_api_gateway_method_settings" "all" {
-  rest_api_id = aws_api_gateway_rest_api.contact_api.id
-  stage_name  = aws_api_gateway_stage.contact_stage.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled        = true
-    logging_level          = "INFO"
-    data_trace_enabled     = true
-    throttling_burst_limit = 5
-    throttling_rate_limit  = 10
-  }
 }
 
 # WAFv2 Web ACL and association with API Gateway stage

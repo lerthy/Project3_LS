@@ -102,13 +102,16 @@ phases:
         BUCKET_NAME=$(aws ssm get-parameter --name "/s3/website_bucket_name" --query 'Parameter.Value' --output text)
         CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/cloudfront/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
         API_GATEWAY_URL=$(aws ssm get-parameter --name "/api-gateway/api_gateway_url" --query 'Parameter.Value' --output text)
+        API_KEY=$(aws ssm get-parameter --name "/api-gateway/api_key" --with-decryption --query 'Parameter.Value' --output text)
         LAMBDA_FUNCTION_NAME=$(aws ssm get-parameter --name "/lambda/lambda_function_name" --query 'Parameter.Value' --output text)
         
         export S3_BUCKET="$BUCKET_NAME"
         echo "Resolved from module SSM parameters: S3_BUCKET=$S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID, API_GATEWAY_URL=$API_GATEWAY_URL, LAMBDA_FUNCTION_NAME=$LAMBDA_FUNCTION_NAME"
+        echo "API key retrieved successfully"
 
-      # Replace API URL in config file
+      # Replace API URL and API key in config file
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
+      - sed -i "s|{{API_KEY}}|$API_KEY|g" web/static/js/config.js
 
       # Deploy static files to S3 (using cp recursive to avoid ListBucket permission)
       - aws s3 cp web/static/ s3://$S3_BUCKET --recursive

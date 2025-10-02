@@ -97,6 +97,10 @@ resource "aws_lambda_function" "contact" {
   timeout          = var.timeout
   source_code_hash = fileexists(var.lambda_zip_path) ? filebase64sha256(var.lambda_zip_path) : null
   reserved_concurrent_executions = 5
+  
+  # Customer-managed KMS encryption for environment variables
+  kms_key_arn = aws_kms_key.lambda_env_encryption.arn
+  
   vpc_config {
     subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
     security_group_ids = [aws_security_group.lambda_sg.id]

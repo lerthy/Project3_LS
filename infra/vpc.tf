@@ -8,12 +8,12 @@ locals {
 module "primary_vpc" {
   source = "./modules/vpc"
 
-  environment        = "primary"
-  vpc_cidr          = "10.0.0.0/16"
+  environment          = "primary"
+  vpc_cidr             = "10.0.0.0/16"
   public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnet_cidrs = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
   availability_zones   = local.primary_azs
-  tags                = local.common_tags
+  tags                 = local.common_tags
 }
 
 # Standby VPC in us-west-2
@@ -23,12 +23,12 @@ module "standby_vpc" {
     aws = aws.standby
   }
 
-  environment        = "standby"
-  vpc_cidr          = "10.1.0.0/16"
+  environment          = "standby"
+  vpc_cidr             = "10.1.0.0/16"
   public_subnet_cidrs  = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
   private_subnet_cidrs = ["10.1.4.0/24", "10.1.5.0/24", "10.1.6.0/24"]
   availability_zones   = local.standby_azs
-  tags                = local.common_tags
+  tags                 = local.common_tags
 }
 
 # VPC Peering for cross-region communication

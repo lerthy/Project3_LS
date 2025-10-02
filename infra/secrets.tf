@@ -10,7 +10,7 @@
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "project3/db-credentials"
   description = "Database credentials for contact form"
-  
+
   tags = merge(local.common_tags, {
     Name = "project3-db-credentials"
     Type = "database-credentials"
@@ -26,7 +26,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
     database = var.db_name
     port     = module.rds.rds_port
   })
-  
+
   depends_on = [module.rds]
 }
 
@@ -35,20 +35,20 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
 
 resource "aws_secretsmanager_secret" "db_credentials_standby" {
   provider = aws.standby
-  
+
   name        = "project3/db-credentials-standby"
   description = "Database credentials for contact form standby region"
-  
+
   tags = merge(local.common_tags, {
-    Name = "project3-db-credentials-standby"
-    Type = "database-credentials"
+    Name   = "project3-db-credentials-standby"
+    Type   = "database-credentials"
     Region = "standby"
   })
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
   provider = aws.standby
-  
+
   secret_id = aws_secretsmanager_secret.db_credentials_standby.id
   secret_string = jsonencode({
     username = var.db_username
@@ -57,7 +57,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
     database = var.db_name
     port     = module.rds_standby.standby_db_port
   })
-  
+
   depends_on = [module.rds_standby]
 }
 
@@ -75,27 +75,27 @@ data "aws_subnets" "default_vpc_subnets" {
 resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotation" {
   name           = "SecretsManagerRDSPostgreSQLRotationSingleUser"
   application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser"
-  
+
   parameters = {
     endpoint            = "https://secretsmanager.${var.aws_region}.amazonaws.com"
     functionName        = "SecretsManagerRDSPostgreSQLRotationSingleUser"
     vpcSecurityGroupIds = module.rds.rds_security_group_id
     vpcSubnetIds        = join(",", data.aws_subnets.default_vpc_subnets.ids)
   }
-  
-  capabilities = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
+
+  capabilities     = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
   semantic_version = "1.1.188"
-  tags = local.common_tags
+  tags             = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_rotation" "db_rotation" {
   secret_id           = aws_secretsmanager_secret.db_credentials.id
   rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.rds_rotation.outputs["RotationLambdaARN"]
-  
+
   rotation_rules {
     automatically_after_days = 30
   }
-  
+
   depends_on = [aws_secretsmanager_secret_version.db_credentials_version]
 }
 
@@ -105,7 +105,7 @@ resource "aws_secretsmanager_secret_rotation" "db_rotation" {
 resource "aws_secretsmanager_secret" "github_webhook" {
   name        = "project3/github-webhook"
   description = "GitHub webhook secret for CI/CD pipeline"
-  
+
   tags = merge(local.common_tags, {
     Name = "project3-github-webhook"
     Type = "webhook-secret"
