@@ -50,48 +50,6 @@ module "rds" {
   tags                = local.common_tags
 }
 
-# Secrets Manager secret for DB credentials (username/password/host/name)
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "project3/db-credentials"
-  description = "Database credentials for contact form"
-  tags        = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "db_credentials_version" {
-  secret_id     = aws_secretsmanager_secret.db_credentials.id
-  secret_string = jsonencode({
-    username = var.db_username
-    password = var.db_password
-    host     = module.rds.rds_address
-    database = var.db_name
-    port     = module.rds.rds_port
-  })
-  depends_on = [module.rds]
-}
-
-# Standby Secrets Manager secret for DB credentials
-resource "aws_secretsmanager_secret" "db_credentials_standby" {
-  provider = aws.standby
-  
-  name        = "project3/db-credentials-standby"
-  description = "Database credentials for contact form standby"
-  tags        = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
-  provider = aws.standby
-  
-  secret_id     = aws_secretsmanager_secret.db_credentials_standby.id
-  secret_string = jsonencode({
-    username = var.db_username
-    password = var.db_password
-    host     = module.rds_standby.standby_db_endpoint
-    database = var.db_name
-    port     = module.rds_standby.standby_db_port
-  })
-  depends_on = [module.rds_standby]
-}
-
 # RDS Standby Module (us-west-2)
 module "rds_standby" {
   source = "./modules/rds-standby"
@@ -109,36 +67,6 @@ module "rds_standby" {
   allocated_storage  = 20
   max_allocated_storage = 100
   tags              = local.common_tags
-}
-
-# Rotation Lambda (AWS managed serverless app) for PostgreSQL single-user rotation
-data "aws_subnets" "default_vpc_subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotation" {
-  name             = "project3-rds-rotation"
-  application_id   = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser"
-  capabilities     = ["CAPABILITY_NAMED_IAM"]
-  parameters = {
-    functionName          = "project3-rds-rotation"
-    vpcSubnetIds          = join(",", data.aws_subnets.default_vpc_subnets.ids)
-    vpcSecurityGroupIds   = module.lambda.lambda_security_group_id
-  }
-  semantic_version = "1.1.188"
-  tags             = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_rotation" "db_rotation" {
-  secret_id           = aws_secretsmanager_secret.db_credentials.id
-  rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.rds_rotation.outputs["RotationLambdaARN"]
-  rotation_rules {
-    automatically_after_days = 30
-  }
-  depends_on = [aws_secretsmanager_secret_version.db_credentials_version]
 }
 
 # Lambda Module

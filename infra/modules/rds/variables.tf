@@ -127,3 +127,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_secrets_manager_access" {
+  description = "Enable additional security group rules for Secrets Manager access"
+  type        = bool
+  default     = false
+}

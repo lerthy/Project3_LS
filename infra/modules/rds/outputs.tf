@@ -27,3 +27,19 @@ output "rds_identifier" {
   description = "RDS instance identifier"
   value       = aws_db_instance.contact_db.identifier
 }
+
+# Secrets Management Outputs
+output "kms_key_arn" {
+  description = "ARN of the KMS key used for RDS encryption"
+  value       = aws_kms_key.rds_encryption.arn
+}
+
+output "kms_key_alias" {
+  description = "Alias of the KMS key used for RDS encryption"
+  value       = aws_kms_alias.rds_encryption.name
+}
+
+output "rds_security_group_id" {
+  description = "Security group ID for RDS access"
+  value       = aws_security_group.rds_ingress.id
+}

@@ -57,3 +57,41 @@ output "web_webhook_url" {
   description = "Webhook URL for web pipeline"
   value       = module.codepipeline.web_webhook_url
 }
+
+# ============================================================================
+# SECRETS OUTPUTS
+# ============================================================================
+
+output "db_secret_arn" {
+  description = "ARN of the database credentials secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_credentials.arn
+  sensitive   = true
+}
+
+output "db_secret_name" {
+  description = "Name of the database credentials secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_credentials.name
+}
+
+output "db_secret_standby_arn" {
+  description = "ARN of the standby database credentials secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_credentials_standby.arn
+  sensitive   = true
+}
+
+output "github_webhook_secret_arn" {
+  description = "ARN of the GitHub webhook secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.github_webhook.arn
+  sensitive   = true
+}
+
+# RDS KMS Key outputs (from RDS module)
+output "rds_kms_key_arn" {
+  description = "ARN of the KMS key used for RDS encryption"
+  value       = module.rds.kms_key_arn
+}
+
+output "rds_kms_key_alias" {
+  description = "Alias of the KMS key used for RDS encryption"
+  value       = module.rds.kms_key_alias
+}

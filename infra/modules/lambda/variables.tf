@@ -61,3 +61,9 @@ variable "alarm_actions" {
   type        = list(string)
   default     = []
 }
+
+variable "kms_key_arn" {
+  description = "ARN of the KMS key for secrets encryption (optional)"
+  type        = string
+  default     = ""
+}
