@@ -44,3 +44,20 @@ variable "db_secret_arn" {
   description = "ARN of the Secrets Manager secret for DB credentials"
   type        = string
 }
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for Lambda VPC config"
+  type        = list(string)
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, prod)"
+  type        = string
+  default     = "development"
+}
+
+variable "alarm_actions" {
+  description = "List of actions for CloudWatch alarms"
+  type        = list(string)
+  default     = []
+}

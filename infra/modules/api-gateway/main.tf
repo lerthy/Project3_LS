@@ -131,7 +131,7 @@ resource "aws_api_gateway_method_settings" "contact_cache" {
     throttling_rate_limit  = 50
   }
 }
-}
+# API Gateway Stage with access logging
 
 resource "aws_api_gateway_stage" "contact_stage" {
   deployment_id = aws_api_gateway_deployment.contact_deployment.id

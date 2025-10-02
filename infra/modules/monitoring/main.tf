@@ -21,6 +21,10 @@ resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
   })
 }
 
+# Reliability: Automated failover testing placeholder
+# Implement a script or CI/CD step to simulate Route53 failover and validate standby region activation.
+# Example: Use AWS CLI to disable primary health check and verify DNS switch.
+
 # Lambda error rate alarm
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "lambda-contact-errors"
@@ -112,6 +116,21 @@ resource "aws_cloudwatch_dashboard" "performance" {
           period = 300
           region = data.aws_region.current.name
           title  = "API Gateway Performance Metrics"
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/Usage", "CarbonFootprint", "Service", "EC2", { stat = "Sum" }],
+            ["AWS/Usage", "CarbonFootprint", "Service", "S3", { stat = "Sum" }],
+            ["AWS/Usage", "CarbonFootprint", "Service", "Lambda", { stat = "Sum" }]
+          ]
+          period = 86400
+          region = data.aws_region.current.name
+          title  = "AWS Carbon Footprint (Daily)"
         }
       }
     ]

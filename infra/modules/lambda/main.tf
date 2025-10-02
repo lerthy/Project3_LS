@@ -107,18 +107,7 @@ resource "aws_lambda_layer_version" "pg_pool" {
 # Lambda Function with performance optimizations
 resource "aws_lambda_function" "contact" {
   memory_size = 256
-  timeout     = 10
   layers      = [aws_lambda_layer_version.pg_pool.arn]
-
-  environment {
-    variables = {
-      NODE_OPTIONS = "--enable-source-maps"
-      POSTGRES_MAX_CONNECTIONS = "10"
-    }
-  }
-
-  # Enable provisioned concurrency
-  provisioned_concurrent_executions = 2
   filename         = var.lambda_zip_path
   function_name    = var.function_name
   role             = aws_iam_role.lambda_exec.arn
@@ -126,26 +115,27 @@ resource "aws_lambda_function" "contact" {
   runtime          = var.runtime
   timeout          = var.timeout
   source_code_hash = fileexists(var.lambda_zip_path) ? filebase64sha256(var.lambda_zip_path) : null
-
-  # Reserve concurrency to prevent thundering herds and protect DB
   reserved_concurrent_executions = 5
-
   vpc_config {
     subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
     security_group_ids = [aws_security_group.lambda_sg.id]
   }
-
   environment {
     variables = {
-      # Database credentials now retrieved from SSM parameters in the function
-      # No longer passing sensitive data as environment variables
-      # AWS_REGION is automatically provided by Lambda runtime
+      NODE_OPTIONS = "--enable-source-maps"
+      POSTGRES_MAX_CONNECTIONS = "10"
       ENVIRONMENT = "development"
       DB_SECRET_ARN = var.db_secret_arn
     }
   }
-
   tags = var.tags
+}
+
+# Provisioned concurrency config for Lambda
+resource "aws_lambda_provisioned_concurrency_config" "contact" {
+  function_name                     = aws_lambda_function.contact.function_name
+  provisioned_concurrent_executions = 2
+  qualifier                        = aws_lambda_function.contact.version
 }
 
 # Dead-letter queue for Lambda failures

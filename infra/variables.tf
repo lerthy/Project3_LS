@@ -1,3 +1,13 @@
+variable "replication_role_arn" {
+  description = "ARN of the IAM role for S3 replication"
+  type        = string
+  default     = ""
+}
+variable "standby_region" {
+  description = "AWS region for standby resources"
+  type        = string
+  default     = "us-west-2"
+}
 variable "db_name" {
   description = "Postgres database name to create/use"
   type        = string

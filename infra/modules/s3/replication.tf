@@ -10,7 +10,7 @@ resource "aws_s3_bucket_replication_configuration" "website_replication" {
   bucket = aws_s3_bucket.website.id
   role   = var.replication_role_arn
 
-  rules {
+  rule {
     id     = "replicate-to-standby"
     status = "Enabled"
     destination {

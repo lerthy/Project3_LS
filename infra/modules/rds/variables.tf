@@ -1,3 +1,16 @@
+variable "dms_subnet_ids" {
+  description = "List of subnet IDs for DMS replication subnet group"
+  type        = list(string)
+}
+variable "dms_subnet_group_id" {
+  description = "DMS replication subnet group ID"
+  type        = string
+}
+
+variable "standby_rds_address" {
+  description = "Address of the standby RDS instance in us-west-2"
+  type        = string
+}
 variable "db_identifier" {
   description = "RDS instance identifier"
   type        = string

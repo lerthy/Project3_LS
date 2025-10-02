@@ -1,3 +1,55 @@
+resource "aws_dms_replication_subnet_group" "dms_subnet_group" {
+  replication_subnet_group_id = "dms-replication-subnet-group"
+  subnet_ids                  = var.dms_subnet_ids
+  tags                       = var.tags
+  replication_subnet_group_description = "Subnet group for DMS replication instance"
+}
+resource "aws_dms_replication_instance" "rds_replication" {
+  replication_instance_id     = "rds-replication-instance"
+  allocated_storage           = 100
+  replication_instance_class  = "dms.t3.medium"
+  engine_version              = "3.4.6"
+  publicly_accessible         = false
+  multi_az                    = true
+  vpc_security_group_ids      = [aws_security_group.rds_ingress.id]
+  replication_subnet_group_id = var.dms_subnet_group_id
+  tags = var.tags
+}
+
+resource "aws_dms_endpoint" "source" {
+  endpoint_id   = "source-endpoint"
+  endpoint_type = "source"
+  engine_name   = "postgres"
+  username      = var.db_username
+  password      = var.db_password
+  server_name   = aws_db_instance.contact_db.address
+  port          = 5432
+  database_name = var.db_name
+  ssl_mode      = "require"
+}
+
+resource "aws_dms_endpoint" "target" {
+  endpoint_id   = "target-endpoint"
+  endpoint_type = "target"
+  engine_name   = "postgres"
+  username      = var.db_username
+  password      = var.db_password
+  server_name   = var.standby_rds_address # Set this variable to your standby RDS address
+  port          = 5432
+  database_name = var.db_name
+  ssl_mode      = "require"
+}
+
+resource "aws_dms_replication_task" "rds_to_standby" {
+  replication_task_id        = "rds-to-standby"
+  migration_type             = "cdc"
+  replication_instance_arn   = aws_dms_replication_instance.rds_replication.arn
+  source_endpoint_arn        = aws_dms_endpoint.source.arn
+  target_endpoint_arn        = aws_dms_endpoint.target.arn
+  table_mappings             = file("${path.module}/dms-table-mappings.json")
+  replication_task_settings  = file("${path.module}/dms-task-settings.json")
+  tags = var.tags
+}
 # Default VPC to host RDS security group
 data "aws_vpc" "default" {
   default = true
@@ -99,9 +151,54 @@ resource "aws_db_instance" "contact_db" {
   # Reliability improvements
   storage_type            = var.storage_type
   backup_retention_period = 7
-  multi_az                = true
+  multi_az                = true # Enabled for high availability
   backup_window           = var.backup_window
   maintenance_window      = var.maintenance_window
+  # Cross-region replication example using AWS DMS
+  # You must create source/target endpoints and a replication instance.
+  # Uncomment and configure the following resources as needed:
+
+  # resource "aws_dms_replication_instance" "rds_replication" {
+  #   allocated_storage    = 100
+  #   replication_instance_class = "dms.t3.medium"
+  #   engine_version      = "3.4.6"
+  #   publicly_accessible = false
+  #   multi_az            = true
+  #   tags = var.tags
+  # }
+
+  # resource "aws_dms_endpoint" "source" {
+  #   endpoint_id = "source-endpoint"
+  #   endpoint_type = "source"
+  #   engine_name = "postgres"
+  #   username = var.db_username
+  #   password = var.db_password
+  #   server_name = aws_db_instance.contact_db.address
+  #   port = 5432
+  #   database_name = var.db_name
+  # }
+
+  # resource "aws_dms_endpoint" "target" {
+  #   endpoint_id = "target-endpoint"
+  #   endpoint_type = "target"
+  #   engine_name = "postgres"
+  #   username = var.db_username
+  #   password = var.db_password
+  #   server_name = module.rds_standby.rds_address
+  #   port = 5432
+  #   database_name = var.db_name
+  # }
+
+  # resource "aws_dms_replication_task" "rds_to_standby" {
+  #   replication_task_id          = "rds-to-standby"
+  #   migration_type               = "cdc"
+  #   replication_instance_arn    = aws_dms_replication_instance.rds_replication.arn
+  #   source_endpoint_arn         = aws_dms_endpoint.source.arn
+  #   target_endpoint_arn         = aws_dms_endpoint.target.arn
+  #   table_mappings              = file("${path.module}/dms-table-mappings.json")
+  #   replication_task_settings   = file("${path.module}/dms-task-settings.json")
+  #   tags = var.tags
+  # }
 
   # Security but Free Tier friendly
   storage_encrypted   = var.storage_encrypted

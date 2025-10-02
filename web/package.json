@@ -11,7 +11,8 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "build": "npm run lint && npm run test",
-    "deploy": "S3_BUCKET=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && aws s3 sync static/ s3://$S3_BUCKET --delete"
+  "deploy": "S3_BUCKET=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && aws s3 sync static/ s3://$S3_BUCKET --delete",
+  "optimize:assets": "npx imagemin static/images/* --out-dir=static/images && npx terser static/js/*.js -o static/js/ --compress --mangle && npx postcss static/css/*.css -o static/css/"
   },
   "keywords": ["aws", "website", "contact-form"],
   "author": "Polymath Services",

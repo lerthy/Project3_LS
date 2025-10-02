@@ -94,20 +94,22 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
   }
 }
 
-# S3 lifecycle rule to prevent storage accumulation
-# TEMPORARILY REMOVED - This resource has been completely removed to resolve IAM permission issues
-# The lifecycle configuration will be re-added after IAM permissions are properly configured
-# 
-# Original configuration:
-# resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
-#   bucket = aws_s3_bucket.website.id
-#   rule {
-#     id     = "cleanup_old_versions"
-#     status = "Enabled"
-#     filter {
-#       prefix = ""
-#     }
-#     noncurrent_version_expiration {
+resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
+  bucket = aws_s3_bucket.website.id
+  rule {
+    id     = "cleanup_old_versions"
+    status = "Enabled"
+    filter {
+      prefix = ""
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
 #       noncurrent_days = 7
 #     }
 #     abort_incomplete_multipart_upload {

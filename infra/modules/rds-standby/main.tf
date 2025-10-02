@@ -44,7 +44,11 @@ resource "aws_db_instance" "contact_db_standby" {
   max_allocated_storage   = var.max_allocated_storage
   storage_type            = "gp2"
   backup_retention_period = 7
-  multi_az                = false
+  multi_az                = false # Standby is single-AZ for cost, but ensure primary is Multi-AZ
+  # NOTE: For cross-region replication, consider AWS DMS or PostgreSQL logical replication.
+  # Example (not implemented):
+  # resource "aws_dms_replication_task" "rds_to_standby" { ... }
+  # AWS RDS automated backups minimum is 1 day. For 15-min backups, consider Aurora or custom automation.
   storage_encrypted       = true
   publicly_accessible     = false
   deletion_protection     = true

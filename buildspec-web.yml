@@ -39,9 +39,12 @@ phases:
       # Lambda tests with coverage
       - npm --prefix web/lambda run test
       
-      - echo "Building static site..."
-      # For this project, static files are already built
-      # In a real Vite project, you'd run: npm run build
+  # Optimize static assets (images, JS, CSS)
+  - echo "Optimizing static assets..."
+  - npm --prefix web run optimize:assets || echo "Asset optimization skipped (no script)"
+  - echo "Building static site..."
+  # For this project, static files are already built
+  # In a real Vite project, you'd run: npm run build
 
   post_build:
     commands:

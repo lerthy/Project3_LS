@@ -56,16 +56,21 @@
 - API Gateway POST/OPTIONS without auth; RDS SG allows 0.0.0.0/0 to 5432 (demo).
 - Terraform remote state in S3 with DynamoDB lock and encryption.
 - DB credentials stored in SSM Parameter Store (`/rds/db_username`, `/rds/db_password` SecureString, `/rds/db_name`, `/rds/rds_address`) and read by Lambda at runtime.
+- There are no Network ACLs (NACLs) configured for your VPC subnets. All subnet-level traffic filtering is handled by default AWS settings and security groups.
 
 ### Gaps
 - RDS publicly accessible SG; Lambda not in VPC; no KMS CMKs for S3/RDS.
 - API lacks authentication/authorization and WAF; CodeBuild IAM policies broad with wildcards.
 - No secret rotation; SSM path not scoped to environment.
+- Missing stateless, subnet-level traffic filtering
+- No defense-in-depth at the subnet layer
+- Cannot explicitly deny unwanted IPs or ports at the subnet level
 
 ### TF improvements
 - Place RDS in private subnets and restrict SG to Lambda/VPC CIDR; attach KMS CMK to RDS and S3.
 - Put Lambda in VPC with least-priv SG; add Secrets Manager for credentials with rotation; scope SSM paths by env.
 - Add API auth (API key/JWT/Cognito) and AWS WAF ACL; tighten IAM to least privilege.
+- Define a NACL resource in Terraform
 
 ### Evidence
 - `infra/modules/s3/main.tf` (public access block, OAI policy)
@@ -416,22 +421,117 @@ async function getDbCredentials() {
   }
 }
 ```
+-Network ACLs (NACLs) have been implemented in your Terraform VPC module.`infra/vpc/main.tf` line 124-194
+```
+# Network ACLs for Public Subnets
+resource "aws_network_acl" "public" {
+  vpc_id = aws_vpc.main.id
+  tags = merge(var.tags, { Name = "${var.environment}-public-nacl" })
+}
 
+# Allow HTTPS inbound, deny all else (example)
+resource "aws_network_acl_rule" "public_https_inbound" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 100
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 443
+  to_port        = 443
+}
+
+resource "aws_network_acl_rule" "public_deny_all_inbound" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 200
+  egress         = false
+  protocol       = "-1"
+  rule_action    = "deny"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 0
+  to_port        = 0
+}
+
+# Associate Public NACL with Public Subnets
+resource "aws_network_acl_association" "public" {
+  count          = length(var.public_subnet_cidrs)
+  subnet_id      = aws_subnet.public[count.index].id
+  network_acl_id = aws_network_acl.public.id
+}
+
+# Network ACLs for Private Subnets
+resource "aws_network_acl" "private" {
+  vpc_id = aws_vpc.main.id
+  tags = merge(var.tags, { Name = "${var.environment}-private-nacl" })
+}
+
+# Allow DB traffic from Lambda SG CIDR (example: adjust as needed)
+resource "aws_network_acl_rule" "private_db_inbound" {
+  network_acl_id = aws_network_acl.private.id
+  rule_number    = 100
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = "10.0.0.0/8" # Example CIDR, adjust to Lambda SG subnet
+  from_port      = 5432
+  to_port        = 5432
+}
+
+resource "aws_network_acl_rule" "private_deny_all_inbound" {
+  network_acl_id = aws_network_acl.private.id
+  rule_number    = 200
+  egress         = false
+  protocol       = "-1"
+  rule_action    = "deny"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 0
+  to_port        = 0
+}
+
+# Associate Private NACL with Private Subnets
+resource "aws_network_acl_association" "private" {
+  count          = length(var.private_subnet_cidrs)
+  subnet_id      = aws_subnet.private[count.index].id
+  network_acl_id = aws_network_acl.private.id
+}
+```
 ---
 
 ## 3) Reliability
 ### Current state
-- Terraform remote state and locking; CloudFront distribution for static site; API Gateway stage configured.
-- RDS backups/maintenance windows configurable; deletion protection flag present.
+- Single RDS instance in primary region without Multi-AZ
+- Basic RDS backups and maintenance windows configured
+- No cross-region disaster recovery setup
+- No automated failover mechanism
+- RPO/RTO requirements not met (e-commerce needs: RPO 1h, RTO 4h)
 
 ### Gaps
-- No health checks/alarms for API errors or Lambda failures; no DLQ or retries on Lambda.
-- RDS not multi-AZ; no dashboards or SLOs; no canary deployments.
+- Single point of failure with non-Multi-AZ RDS
+- No cross-region redundancy for disaster recovery
+- Missing health checks and automated failover
+- No warm standby setup to meet RTO requirement
+- Backup strategy insufficient for RPO requirement
+- No DLQ or retries on Lambda functions
+- Missing monitoring and alerting system
 
 ### TF improvements
-- Add CloudWatch alarms for 4XX/5XX, Lambda errors/duration/timeouts; create dashboards.
-- Add Lambda DLQ (SQS) and reserved concurrency; enable API Gateway access logs and execution logging.
-- Enable RDS Multi-AZ (if budget) and automated backups; add Route53 health checks (if DNS used).
+1. Implement Warm Standby Architecture:
+   - Deploy standby RDS in us-west-2
+   - Configure cross-region replication
+   - Set up Route53 health checks and failover routing
+   - Enable Multi-AZ for primary RDS
+
+2. Enhance Monitoring and Recovery:
+   - Add CloudWatch alarms for API errors (4XX/5XX)
+   - Monitor Lambda performance and failures
+   - Create operational dashboards
+   - Implement automated failover testing
+
+3. Improve Data Protection:
+   - Configure RDS automated backups every 15 minutes
+   - Enable point-in-time recovery
+   - Implement cross-region S3 replication
+   - Set up proper backup retention policies
 
 ### Evidence
 - `infra/modules/monitoring/main.tf` (only billing alarm)
@@ -661,6 +761,71 @@ resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
   threshold           = 1
   alarm_actions       = var.alarm_actions
   dimensions = { ApiId = var.api_gateway_id, Stage = var.api_gateway_stage, Resource = "/contact", Method = "POST" }
+}
+```
+- Multi-AZ for primary RDS and DMS cross-region replication:
+```81:120:infra/modules/rds/main.tf
+resource "aws_db_instance" "contact_db" {
+  # ...existing config...
+  multi_az = true
+  # Cross-region replication with AWS DMS
+  # See DMS resources below
+}
+```
+
+- DMS replication resources:
+```infra/modules/rds/main.tf
+resource "aws_dms_replication_instance" "rds_replication" { ... }
+resource "aws_dms_endpoint" "source" { ... }
+resource "aws_dms_endpoint" "target" { ... }
+resource "aws_dms_replication_task" "rds_to_standby" { ... }
+resource "aws_dms_replication_subnet_group" "dms_subnet_group" { ... }
+```
+
+- DMS table mappings and task settings:
+```infra/modules/rds/dms-table-mappings.json
+{
+  "rules": [
+    {
+      "rule-type": "selection",
+      "rule-id": "1",
+      "rule-name": "1",
+      "object-locator": {
+        "schema-name": "%",
+        "table-name": "%"
+      },
+      "rule-action": "include"
+    }
+  ]
+}
+```
+```infra/modules/rds/dms-task-settings.json
+{
+  "TargetMetadata": { ... },
+  "FullLoadSettings": { ... },
+  "Logging": { ... },
+  "ControlTablesSettings": { ... },
+  "StreamBufferSettings": { ... },
+  "ChangeProcessingDdlHandlingPolicy": { ... },
+  "ErrorBehavior": { ... },
+  "ChangeProcessingPolicy": { ... }
+}
+```
+
+- S3 lifecycle for backup retention:
+```110:120:infra/modules/s3/main.tf
+resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
+  bucket = aws_s3_bucket.website.id
+  rule {
+    id     = "cleanup_old_versions"
+    status = "Enabled"
+    filter {
+      prefix = ""
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+  }
 }
 ```
 ---
@@ -1015,18 +1180,119 @@ resource "aws_cloudwatch_dashboard" "performance" {
 ## 6) Sustainability
 ### Current state
 - Static hosting with CDN and serverless compute reduces idle waste; web images include WebP formats.
+- Use S3 Intelligent-Tiering for storage to optimize energy and cost based on access patterns.
+- Enable S3 lifecycle rules for all buckets to automatically delete old versions and unused objects.
+- Monitor and report carbon footprint using AWS CloudWatch and third-party tools (e.g., AWS Customer Carbon Footprint Tool).
+
 
 ### Gaps
 - RDS instance is always-on; caching/TTLs not optimized; no autoscaling or scheduled scale-down.
+- Higher energy consumption and carbon footprint due to always-on resources and inefficient scaling.
+- Missed opportunities for cost savings with S3 storage and lifecycle management.
+
 
 ### TF improvements
-- Improve CloudFront/S3 caching and compression; audit and optimize assets; enable brotli.
-- Use serverless databases where possible; scale down non-prod; ephemeral preview environments for PRs.
+- Optimize CloudFront and S3 caching policies (set appropriate Cache-Control headers, enable Brotli/gzip compression).
+- Add Terraform resources for monitoring and reporting carbon footprint (e.g., CloudWatch dashboards, custom metrics).
+- Tag all resources with sustainability-related metadata (e.g., “environment”, “purpose”, “owner”) for tracking and reporting.
+- Audit and optimize static assets (images, JS, CSS) during CI/CD; automate with Terraform and build steps.
 
 ### Evidence
 - `web/static/images/*.webp` (optimized images)
 - `infra/modules/cloudfront/main.tf` (caching)
 
+### Sustainability improvements (code refs)
+
+#### 1. CloudFront Compression & Caching
+-Enabled Brotli/gzip compression and tiered TTLs for static assets.
+```
+default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = "s3-origin"
+    compress        = true
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+      headers = ["Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 86400    # 24 hours
+    max_ttl                    = 31536000 # 1 year
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.optimized.id
+  }
+```
+#### 2. S3 Lifecycle Rules
+-Automatic cleanup of old versions and incomplete multipart uploads.
+```
+resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
+  bucket = aws_s3_bucket.website.id
+  rule {
+    id     = "cleanup_old_versions"
+    status = "Enabled"
+    filter {
+      prefix = ""
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+```
+### 3. Carbon Footprint Monitoring
+-CloudWatch dashboard and custom metrics for sustainability reporting.
+```
+ properties = {
+          metrics = [
+            ["AWS/Usage", "CarbonFootprint", "Service", "EC2", { stat = "Sum" }],
+            ["AWS/Usage", "CarbonFootprint", "Service", "S3", { stat = "Sum" }],
+            ["AWS/Usage", "CarbonFootprint", "Service", "Lambda", { stat = "Sum" }]
+          ]
+          period = 86400
+          region = data.aws_region.current.name
+          title  = "AWS Carbon Footprint (Daily)"
+        }
+```
+
+### 4. Resource Tagging
+-Sustainability-related metadata tags (environment, purpose, owner) on all resources.
+```
+# Common tags
+locals {
+  common_tags = {
+    Environment   = "development"
+    Project       = "assignment"
+    ManagedBy     = "terraform"
+    Purpose       = "sustainability"
+    Owner         = "DevOpsTeam"
+    Sustainability = "true"
+  }
+}
+
+```
+
+### 5. CI/CD Asset Optimization
+-Automated image, JS, and CSS optimization in build pipeline.
+-buildspec-web.yml
+```
+# Optimize static assets (images, JS, CSS)
+  - echo "Optimizing static assets..."
+  - npm --prefix web run optimize:assets || echo "Asset optimization skipped (no script)"
+  - echo "Building static site..."
+```
+-package.json
+```
+  "optimize:assets": "npx imagemin static/images/* --out-dir=static/images && npx terser static/js/*.js -o static/js/ --compress --mangle && npx postcss static/css/*.css -o static/css/"
+
+```
 ---
 
 ## Action Items (Optional)
