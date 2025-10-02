@@ -101,31 +101,138 @@ resource "aws_sns_topic" "alerts" {
   name = "multi-region-alerts"
 }
 
-# Multi-region monitoring resources (disabled for single-region setup)
-# Uncomment when implementing full multi-region architecture
+# Multi-region monitoring resources
+
+# IAM role for alert processor Lambda
+resource "aws_iam_role" "alert_processor" {
+  name = "alert-processor-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "alert_processor_basic" {
+  role       = aws_iam_role.alert_processor.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
 
 # Lambda function to process alerts
-# resource "aws_lambda_function" "alert_processor" {
-#   filename      = "alert_processor.zip"
-#   function_name = "multi-region-alert-processor"
-#   role         = aws_iam_role.alert_processor.arn
-#   handler      = "index.handler"
-#   runtime      = "nodejs18.x"
-#
-#   environment {
-#     variables = {
-#       SNS_TOPIC_ARN = aws_sns_topic.alerts.arn
-#     }
-#   }
-# }
+resource "aws_lambda_function" "alert_processor" {
+  filename      = "${path.module}/alert_processor.zip"
+  function_name = "multi-region-alert-processor"
+  role         = aws_iam_role.alert_processor.arn
+  handler      = "index.handler"
+  runtime      = "nodejs18.x"
+
+  environment {
+    variables = {
+      SNS_TOPIC_ARN = aws_sns_topic.alerts.arn
+    }
+  }
+}
+
+# Primary RDS CPU alarm
+resource "aws_cloudwatch_metric_alarm" "primary_rds_cpu" {
+  count = var.primary_rds_id != "" ? 1 : 0
+  
+  alarm_name          = "primary-rds-cpu-utilization"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors primary RDS CPU utilization"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = var.primary_rds_id
+  }
+}
+
+# Standby RDS CPU alarm
+resource "aws_cloudwatch_metric_alarm" "standby_rds_cpu" {
+  count = var.standby_rds_id != "" ? 1 : 0
+  
+  alarm_name          = "standby-rds-cpu-utilization"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors standby RDS CPU utilization"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = var.standby_rds_id
+  }
+}
+
+# Primary API errors alarm
+resource "aws_cloudwatch_metric_alarm" "primary_api_errors" {
+  count = var.primary_api_name != "" ? 1 : 0
+  
+  alarm_name          = "primary-api-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors primary API Gateway 5XX errors"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ApiName = var.primary_api_name
+  }
+}
+
+# Standby API errors alarm  
+resource "aws_cloudwatch_metric_alarm" "standby_api_errors" {
+  count = var.standby_api_name != "" ? 1 : 0
+  
+  alarm_name          = "standby-api-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors standby API Gateway 5XX errors"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ApiName = var.standby_api_name
+  }
+}
 
 # Composite alarm for overall system health
-# resource "aws_cloudwatch_composite_alarm" "system_health" {
-#   alarm_name = "system-health-composite"
-#   alarm_description = "Composite alarm for overall system health"
-#
-#   alarm_rule = "ALARM(${aws_cloudwatch_metric_alarm.primary_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.primary_api_errors.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_api_errors.alarm_name})"
-#
-#   alarm_actions = [aws_sns_topic.alerts.arn]
-#   ok_actions    = [aws_sns_topic.alerts.arn]
-# }
+resource "aws_cloudwatch_composite_alarm" "system_health" {
+  alarm_name = "system-health-composite"
+  alarm_description = "Composite alarm for overall system health"
+
+  alarm_rule = join(" OR ", compact([
+    var.primary_rds_id != "" ? "ALARM(${aws_cloudwatch_metric_alarm.primary_rds_cpu[0].alarm_name})" : "",
+    var.standby_rds_id != "" ? "ALARM(${aws_cloudwatch_metric_alarm.standby_rds_cpu[0].alarm_name})" : "",
+    var.primary_api_name != "" ? "ALARM(${aws_cloudwatch_metric_alarm.primary_api_errors[0].alarm_name})" : "",
+    var.standby_api_name != "" ? "ALARM(${aws_cloudwatch_metric_alarm.standby_api_errors[0].alarm_name})" : ""
+  ]))
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}

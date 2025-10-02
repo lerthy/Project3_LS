@@ -12,3 +12,13 @@ output "standby_db_sg_id" {
   description = "Security group ID for standby RDS"
   value       = aws_security_group.rds_ingress_standby.id
 }
+
+output "standby_db_identifier" {
+  description = "Identifier of the standby RDS instance"
+  value       = aws_db_instance.contact_db_standby.identifier
+}
+
+output "standby_db_port" {
+  description = "Port of the standby RDS instance"
+  value       = aws_db_instance.contact_db_standby.port
+}

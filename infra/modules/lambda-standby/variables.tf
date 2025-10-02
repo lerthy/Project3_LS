@@ -45,3 +45,9 @@ variable "region" {
   description = "AWS region for standby Lambda deployment"
   type        = string
 }
+
+variable "lambda_zip_path" {
+  description = "Path to Lambda function ZIP file"
+  type        = string
+  default     = "lambda.zip"
+}

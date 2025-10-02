@@ -71,3 +71,9 @@ variable "github_webhook_secret" {
   sensitive   = true
   default     = "your-webhook-secret-here"
 }
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for DNS failover (optional)"
+  type        = string
+  default     = ""
+}

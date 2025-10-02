@@ -32,6 +32,7 @@ resource "aws_lambda_function" "function" {
   runtime      = "nodejs18.x"
   timeout      = 30
   memory_size  = 256
+  filename     = var.lambda_zip_path
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids

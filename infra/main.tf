@@ -31,7 +31,8 @@ module "s3" {
   website_bucket_name   = "my-website-bucket-project3-fresh"
   artifacts_bucket_name = "codepipeline-artifacts-project3-fresh"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
-  enable_replication    = false  # Disabled for now
+  enable_replication    = var.environment == "production" ? true : false  # Enable for production
+  replication_role_arn  = var.environment == "production" ? var.replication_role_arn : ""
   tags                  = local.common_tags
 }
 
@@ -82,6 +83,48 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
   depends_on = [module.rds]
 }
 
+# Standby Secrets Manager secret for DB credentials
+resource "aws_secretsmanager_secret" "db_credentials_standby" {
+  provider = aws.standby
+  
+  name        = "project3/db-credentials-standby"
+  description = "Database credentials for contact form standby"
+  tags        = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
+  provider = aws.standby
+  
+  secret_id     = aws_secretsmanager_secret.db_credentials_standby.id
+  secret_string = jsonencode({
+    username = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+    password = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+    host     = module.rds_standby.standby_db_endpoint
+    database = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+    port     = module.rds_standby.standby_db_port
+  })
+  depends_on = [module.rds_standby]
+}
+
+# RDS Standby Module (us-west-2)
+module "rds_standby" {
+  source = "./modules/rds-standby"
+  
+  providers = {
+    aws = aws.standby
+  }
+
+  region             = var.standby_region
+  db_identifier      = "contact-db-standby"
+  db_username        = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+  db_password        = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+  db_name           = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  instance_class     = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
+  allocated_storage  = 20
+  max_allocated_storage = 100
+  tags              = local.common_tags
+}
+
 # Rotation Lambda (AWS managed serverless app) for PostgreSQL single-user rotation
 data "aws_subnets" "default_vpc_subnets" {
   filter {
@@ -125,6 +168,25 @@ module "lambda" {
   tags              = local.common_tags
 }
 
+# Lambda Standby Module (us-west-2)
+module "lambda_standby" {
+  source = "./modules/lambda-standby"
+  
+  providers = {
+    aws = aws.standby
+  }
+
+  function_name      = "contact-form-standby"
+  lambda_role_arn    = module.lambda.lambda_role_arn
+  vpc_id            = module.standby_vpc.vpc_id
+  private_subnet_ids = module.standby_vpc.private_subnet_ids
+  db_secret_arn     = aws_secretsmanager_secret.db_credentials_standby.arn
+  environment       = var.environment
+  region            = var.standby_region
+  lambda_zip_path   = "lambda.zip"
+  tags              = local.common_tags
+}
+
 # API Gateway Module
 module "api_gateway" {
   source = "./modules/api-gateway"
@@ -135,6 +197,33 @@ module "api_gateway" {
   aws_region          = var.aws_region
   log_retention_days  = var.environment == "production" ? 90 : 7
   tags                = local.common_tags
+}
+
+# API Gateway Standby Module (us-west-2)
+module "api_gateway_standby" {
+  source = "./modules/api-gateway-standby"
+  
+  providers = {
+    aws = aws.standby
+  }
+
+  region            = var.standby_region
+  environment       = var.environment
+  lambda_invoke_arn = module.lambda_standby.lambda_invoke_arn
+  tags              = local.common_tags
+}
+
+# Route53 Module for DNS Failover (conditional on hosted zone)
+module "route53" {
+  source = "./modules/route53"
+  count  = var.route53_zone_id != "" ? 1 : 0
+
+  primary_api_dns   = module.api_gateway.api_gateway_url
+  standby_api_dns   = module.api_gateway_standby.api_endpoint
+  primary_api_ip    = "1.2.3.4"  # Placeholder - would be resolved from API Gateway
+  standby_api_ip    = "5.6.7.8"  # Placeholder - would be resolved from API Gateway
+  route53_zone_id   = var.route53_zone_id
+  tags              = local.common_tags
 }
 
 # Lambda permission for API Gateway (created after both modules)
@@ -196,5 +285,18 @@ module "monitoring" {
   lambda_function_name = module.lambda.lambda_function_name
   api_gateway_id       = module.api_gateway.api_gateway_id
   api_gateway_stage    = "dev"
+  
+  # Multi-region monitoring variables
+  primary_rds_id     = module.rds.rds_identifier
+  standby_rds_id     = module.rds_standby.standby_db_identifier
+  primary_region     = var.aws_region
+  standby_region     = var.standby_region
+  primary_lambda_name = module.lambda.lambda_function_name
+  standby_lambda_name = module.lambda_standby.lambda_function_name
+  primary_api_name    = "contact-api"
+  standby_api_name    = "${var.environment}-contact-api"
+  primary_health_check_id  = length(module.route53) > 0 ? module.route53[0].primary_health_check_id : ""
+  standby_health_check_id  = length(module.route53) > 0 ? module.route53[0].standby_health_check_id : ""
+  
   tags                 = local.common_tags
 }
