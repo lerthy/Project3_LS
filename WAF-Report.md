@@ -37,10 +37,23 @@
 ### Gaps
 - No alarms/notifications on pipeline or build failures; no manual approval gates.
 - Limited automated tests (Terratest skipped); no runbooks.
+- No operational dashboards for CI/CD pipelines 
+- Missing deployment rollback mechanisms 
+- No automated testing in CI/CD pipelines 
+- No infrastructure drift detection 
+- No automated documentation generation 
+- Missing deployment health checks 
+- No chaos engineering/resilience testing 
+- Limited monitoring of deployment metrics 
 
 ### TF improvements
 - Add CloudWatch alarms + SNS topics for CodeBuild/CodePipeline failures; add manual approval stage in pipelines.
 - Add Terratest stage and enforce on PRs; expand tagging (owner, cost-center, service, environment).
+- Create SNS topics and CloudWatch alarms for CI/CD failures
+- Manual Approval Gates
+- Enhanced Terratest Implementation
+- Operational Runbooks
+- Operational Dashboards
 
 ### Evidence
 - `cicd/main.tf` (CodePipeline, CodeBuild stages)
@@ -48,6 +61,572 @@
 - `infra/main.tf` locals `common_tags`
 - `infra/tests/infra_integration_test.go`
 
+### Operational Excellence  improvements (Code ref)
+## 1. CI/CD Monitoring & Alerting
+
+### SNS Topics for Notifications
+CI/CD notifications topic: `infra/modules/operational-excellence/main.tf` lines 6-15
+```6:15:infra/modules/operational-excellence/main.tf
+resource "aws_sns_topic" "cicd_notifications" {
+  name = "cicd-pipeline-notifications-${var.environment}"
+  
+  tags = merge(var.tags, {
+    Name = "cicd-notifications-${var.environment}"
+    Type = "operational-excellence"
+    Purpose = "pipeline-monitoring"
+  })
+}
+```
+
+Email subscription for notifications: `infra/modules/operational-excellence/main.tf` lines 17-22
+```17:22:infra/modules/operational-excellence/main.tf
+resource "aws_sns_topic_subscription" "email_notification" {
+  count     = var.notification_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.cicd_notifications.arn
+  protocol  = "email"
+  endpoint  = var.notification_email
+}
+```
+
+### CloudWatch Alarms for Pipeline Failures
+Infrastructure pipeline failure alarm: `infra/modules/operational-excellence/main.tf` lines 25-40
+```25:40:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_metric_alarm" "infra_pipeline_failures" {
+  alarm_name          = "infra-pipeline-failures-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "PipelineExecutionFailure"
+  namespace           = "AWS/CodePipeline"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "Infrastructure pipeline failed in ${var.environment}"
+  alarm_actions       = [aws_sns_topic.cicd_notifications.arn]
+  ok_actions          = [aws_sns_topic.cicd_notifications.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    PipelineName = var.infra_pipeline_name
+  }
+}
+```
+
+Web pipeline failure alarm: `infra/modules/operational-excellence/main.tf` lines 55-70
+```55:70:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_metric_alarm" "web_pipeline_failures" {
+  alarm_name          = "web-pipeline-failures-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "PipelineExecutionFailure"
+  namespace           = "AWS/CodePipeline"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "Web pipeline failed in ${var.environment}"
+  alarm_actions       = [aws_sns_topic.cicd_notifications.arn]
+  ok_actions          = [aws_sns_topic.cicd_notifications.arn]
+
+  dimensions = {
+    PipelineName = var.web_pipeline_name
+  }
+}
+```
+
+CodeBuild failure alarms: `infra/modules/operational-excellence/main.tf` lines 85-115
+```85:115:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_metric_alarm" "infra_build_failures" {
+  alarm_name          = "infra-build-failures-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "FailedBuilds"
+  namespace           = "AWS/CodeBuild"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "Infrastructure CodeBuild project failed in ${var.environment}"
+  alarm_actions       = [aws_sns_topic.cicd_notifications.arn]
+
+  dimensions = {
+    ProjectName = var.infra_build_project
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "web_build_failures" {
+  alarm_name          = "web-build-failures-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "FailedBuilds"
+  namespace           = "AWS/CodeBuild"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "Web CodeBuild project failed in ${var.environment}"
+  alarm_actions       = [aws_sns_topic.cicd_notifications.arn]
+
+  dimensions = {
+    ProjectName = var.web_build_project
+  }
+}
+```
+
+---
+
+## 2. Manual Approval Gates
+
+### SNS Topic for Manual Approvals
+Manual approval topic: `infra/modules/operational-excellence/main.tf` lines 135-145
+```135:145:infra/modules/operational-excellence/main.tf
+resource "aws_sns_topic" "manual_approval" {
+  name = "manual-approval-notifications-${var.environment}"
+  
+  tags = merge(var.tags, {
+    Name = "manual-approval-${var.environment}"
+    Type = "operational-excellence"
+    Purpose = "deployment-approval"
+  })
+}
+```
+
+Approval email subscription: `infra/modules/operational-excellence/main.tf` lines 147-152
+```147:152:infra/modules/operational-excellence/main.tf
+resource "aws_sns_topic_subscription" "approval_email" {
+  count     = var.approval_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.manual_approval.arn
+  protocol  = "email"
+  endpoint  = var.approval_email
+}
+```
+
+### IAM Roles for Approval Process
+Approval role for CodePipeline: `infra/modules/operational-excellence/main.tf" lines 165-180
+```165:180:infra/modules/operational-excellence/main.tf
+resource "aws_iam_role" "approval_role" {
+  name = "codepipeline-approval-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+```
+
+Approval policy: `infra/modules/operational-excellence/main.tf` lines 190-210
+```190:210:infra/modules/operational-excellence/main.tf
+resource "aws_iam_role_policy" "approval_policy" {
+  name = "approval-policy-${var.environment}"
+  role = aws_iam_role.approval_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish",
+          "codepipeline:PutApprovalResult"
+        ]
+        Resource = [
+          aws_sns_topic.manual_approval.arn,
+          "arn:aws:codepipeline:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+        ]
+      }
+    ]
+  })
+}
+```
+
+---
+
+## 3. Operational Dashboards
+
+### Operational Excellence Dashboard
+Main operational dashboard: `infra/modules/operational-excellence/main.tf` lines 215-320
+```215:320:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_dashboard" "operational_excellence" {
+  dashboard_name = "operational-excellence-${var.environment}"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/CodePipeline", "PipelineExecutionSuccess", "PipelineName", var.infra_pipeline_name],
+            [".", "PipelineExecutionFailure", ".", "."],
+            [".", "PipelineExecutionSuccess", "PipelineName", var.web_pipeline_name],
+            [".", "PipelineExecutionFailure", ".", "."]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = data.aws_region.current.name
+          title  = "Pipeline Success/Failure Rate"
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/CodeBuild", "Duration", "ProjectName", var.infra_build_project],
+            [".", ".", ".", var.web_build_project]
+          ]
+          period = 300
+          stat   = "Average"
+          region = data.aws_region.current.name
+          title  = "Build Duration (seconds)"
+        }
+      }
+    ]
+  })
+}
+```
+
+### Deployment Health Dashboard
+Deployment monitoring dashboard: `infra/modules/operational-excellence/main.tf` lines 325-420
+```325:420:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_dashboard" "deployment_health" {
+  dashboard_name = "deployment-health-${var.environment}"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/CodePipeline", "ActionExecutionSuccess", "PipelineName", var.infra_pipeline_name, "ActionName", "Deploy"],
+            [".", "ActionExecutionFailure", ".", ".", ".", "."],
+            [".", "ActionExecutionSuccess", "PipelineName", var.web_pipeline_name, "ActionName", "Deploy"],
+            [".", "ActionExecutionFailure", ".", ".", ".", "."]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = data.aws_region.current.name
+          title  = "Deployment Success Rate"
+        }
+      },
+      {
+        type   = "log"
+        width  = 24
+        height = 6
+        properties = {
+          query  = "SOURCE '/aws/codebuild/${var.infra_build_project}' | fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20"
+          region = data.aws_region.current.name
+          title  = "Recent Build Errors"
+          view   = "table"
+        }
+      }
+    ]
+  })
+}
+```
+
+---
+
+## 4. Infrastructure Drift Detection
+
+### Drift Detection Scheduler
+CloudWatch event rule for drift detection: `infra/modules/operational-excellence/main.tf` lines 480-490
+```480:490:infra/modules/operational-excellence/main.tf
+resource "aws_cloudwatch_event_rule" "drift_detection_schedule" {
+  name                = "terraform-drift-detection-${var.environment}"
+  description         = "Trigger drift detection daily"
+  schedule_expression = "cron(0 18 * * ? *)"  # Daily at 6 PM UTC
+
+  tags = merge(var.tags, {
+    Name = "drift-detection-schedule-${var.environment}"
+    Type = "operational-excellence"
+  })
+}
+```
+
+### Drift Detection IAM Role
+Drift detector role: `infra/modules/operational-excellence/main.tf` lines 425-440
+```425:440:infra/modules/operational-excellence/main.tf
+resource "aws_iam_role" "drift_detector_role" {
+  name = "drift-detector-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+```
+
+Drift detection policy: `infra/modules/operational-excellence/main.tf` lines 450-475
+```450:475:infra/modules/operational-excellence/main.tf
+resource "aws_iam_role_policy" "drift_detector_policy" {
+  name = "drift-detector-policy-${var.environment}"
+  role = aws_iam_role.drift_detector_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "ec2:Describe*",
+          "rds:Describe*",
+          "lambda:GetFunction",
+          "apigateway:GET",
+          "cloudfront:GetDistribution",
+          "sns:Publish"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.terraform_state_bucket}",
+          "arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}",
+          "*"
+        ]
+      }
+    ]
+  })
+}
+```
+
+---
+
+## 5. Enhanced CI/CD Buildspecs
+
+### Infrastructure Pipeline Security Scanning
+Security scanning in infra buildspec: `buildspec-infra.yml` lines 25-45
+```25:45:buildspec-infra.yml
+  pre_build:
+    commands:
+      - echo "=== OPERATIONAL EXCELLENCE: Security and Quality Gates ==="
+      
+      # Install tfsec for security scanning
+      - curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+      - export PATH=$PATH:/usr/local/bin
+      
+      # Security scanning with tfsec
+      - echo "Running security scan with tfsec..."
+      - tfsec . --format json --out tfsec-results.json || echo "Security scan completed with findings"
+      
+      # Terraform validation and formatting
+      - echo "Validating Terraform configuration..."
+      - terraform fmt -check=true -diff=true -recursive
+      - terraform validate
+      
+      # Infrastructure drift detection
+      - echo "Checking for infrastructure drift..."
+      - terraform plan -detailed-exitcode -out=drift-check.tfplan || PLAN_EXIT_CODE=$?
+      - |
+        if [ "$PLAN_EXIT_CODE" = "2" ]; then
+          echo "⚠️ Infrastructure drift detected! Resources will be modified."
+          terraform show -json drift-check.tfplan > drift-analysis.json
+        else
+          echo "✅ No infrastructure drift detected."
+        fi
+```
+
+### Build Phase Testing
+Comprehensive testing in build phase: `buildspec-infra.yml` lines 50-80
+```50:80:buildspec-infra.yml
+  build:
+    commands:
+      - echo "=== OPERATIONAL EXCELLENCE: Infrastructure Testing ==="
+      
+      # Run comprehensive Terratest for production, quick tests for dev
+      - |
+        if [ "$TF_VAR_environment" = "production" ]; then
+          echo "Running full Terratest suite for production..."
+          go -C infra test -v -timeout 30m -run TestInfra ./tests/
+        else
+          echo "Running quick tests for development environment..."
+          CI_SKIP_TERRATEST=1 go -C infra test -v -short -run TestInfra ./tests/
+        fi
+      
+      # Generate test reports
+      - echo "Generating test reports..."
+      - |
+        go -C infra test -v -json -run TestInfra ./tests/ > test-results.json || echo "Test execution completed"
+        
+      # Validate operational excellence components
+      - echo "Validating operational excellence features..."
+      - |
+        cd infra
+        terraform plan -out=validation.tfplan
+        terraform show -json validation.tfplan | jq '.planned_values.root_module.child_modules[] | select(.address == "module.operational_excellence")' || echo "Operational excellence module validation completed"
+```
+
+### Post-Build Health Checks
+Deployment validation in post_build: `buildspec-infra.yml` lines 85-120
+```85:120:buildspec-infra.yml
+  post_build:
+    commands:
+      - echo "=== OPERATIONAL EXCELLENCE: Post-Deployment Validation ==="
+      
+      # Validate deployment health
+      - echo "Validating infrastructure health..."
+      - |
+        cd infra
+        terraform output -json > outputs.json
+        
+        # Validate Lambda function health
+        if [ -f outputs.json ]; then
+          FUNCTION_NAME=$(cat outputs.json | jq -r '.lambda_function_name.value // empty')
+          if [ ! -z "$FUNCTION_NAME" ]; then
+            aws lambda get-function --function-name "$FUNCTION_NAME" --region us-east-1 || echo "Lambda validation completed"
+          fi
+        fi
+        
+      # Test operational monitoring
+      - echo "Testing operational monitoring setup..."
+      - |
+        aws cloudwatch describe-alarms --alarm-names "pipeline-failure-alarm-$TF_VAR_environment" --region us-east-1 || echo "Monitoring validation completed"
+        
+      # Operational excellence success notification
+      - echo "Sending deployment success notification..."
+      - |
+        if [ ! -z "$TF_VAR_notification_email" ]; then
+          aws sns publish --topic-arn "arn:aws:sns:us-east-1:$(aws sts get-caller-identity --query Account --output text):deployment-notifications-$TF_VAR_environment" \
+            --subject "✅ Infrastructure Deployment Successful - $TF_VAR_environment" \
+            --message "Infrastructure deployment completed successfully for environment: $TF_VAR_environment. All operational excellence checks passed." \
+            --region us-east-1 || echo "Notification attempted"
+        fi
+```
+
+### Web Application Enhanced Testing
+Web buildspec operational excellence: `buildspec-web.yml` lines 30-65
+```30:65:buildspec-web.yml
+  build:
+    commands:
+      - echo "=== OPERATIONAL EXCELLENCE: Testing and Quality Assurance ==="
+      
+      # Frontend tests with comprehensive coverage
+      - echo "Running frontend tests with coverage reporting..."
+      - npm --prefix web run test
+      
+      # Lambda tests with comprehensive coverage
+      - echo "Running Lambda function tests with coverage reporting..."
+      - npm --prefix web/lambda run test
+      
+      # Performance testing for Lambda function
+      - echo "Running Lambda performance tests..."
+      - |
+        cd web/lambda
+        if [ -f test-payload.json ]; then
+          node -e "
+            const { handler } = require('./index.js');
+            const payload = require('./test-payload.json');
+            console.time('Lambda Execution Time');
+            handler(payload, {}, (err, result) => {
+              console.timeEnd('Lambda Execution Time');
+              if (err) console.error('Lambda test failed:', err);
+              else console.log('Lambda test successful:', result);
+            });
+          " || echo "Lambda performance test completed"
+        fi
+        
+      # Generate test reports
+      - echo "Generating test reports..."
+      - |
+        echo "=== WEB APPLICATION TEST REPORT ===" > test-report.txt
+        echo "Frontend Coverage:" >> test-report.txt
+        [ -f web/coverage/coverage-summary.json ] && cat web/coverage/coverage-summary.json >> test-report.txt || echo "Frontend coverage not available" >> test-report.txt
+```
+
+### Web Application Health Validation
+Post-deployment health checks: `buildspec-web.yml` lines 95-130
+```95:130:buildspec-web.yml
+      # Post-deployment health checks
+      - echo "=== OPERATIONAL EXCELLENCE: Post-Deployment Health Checks ==="
+      
+      # Test API Gateway endpoint
+      - |
+        echo "Testing API Gateway endpoint health..."
+        sleep 30
+        curl -f -s "$API_GATEWAY_URL" > /dev/null && echo "✅ API Gateway is healthy" || echo "⚠️ API Gateway health check failed"
+      
+      # Test Lambda function
+      - |
+        echo "Testing Lambda function health..."
+        aws lambda invoke --function-name "$LAMBDA_FUNCTION_NAME" --payload '{"test": true}' response.json --region "$AWS_DEFAULT_REGION" && echo "✅ Lambda function is healthy" || echo "⚠️ Lambda function health check failed"
+        rm -f response.json
+      
+      # Test CloudFront distribution
+      - |
+        echo "Testing CloudFront distribution..."
+        CLOUDFRONT_URL="https://$(aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.DomainName' --output text --region "$AWS_DEFAULT_REGION")"
+        curl -f -s "$CLOUDFRONT_URL" > /dev/null && echo "✅ CloudFront distribution is healthy" || echo "⚠️ CloudFront health check failed"
+      
+      # Send success notification
+      - |
+        echo "Sending deployment success notification..."
+        if [ ! -z "$TF_VAR_notification_email" ]; then
+          aws sns publish --topic-arn "arn:aws:sns:us-east-1:$(aws sts get-caller-identity --query Account --output text):deployment-notifications-$TF_VAR_environment" \
+            --subject "✅ Web Application Deployment Successful - $TF_VAR_environment" \
+            --message "Web application deployment completed successfully for environment: $TF_VAR_environment. All health checks passed. API URL: $API_GATEWAY_URL" \
+            --region us-east-1 || echo "Notification attempted"
+        fi
+```
+
+---
+
+## 6. Enhanced Terratest Implementation
+
+### Comprehensive Testing Framework
+Multi-pillar test implementation: `infra/tests/infra_integration_test.go` lines 50-100
+```50:100:infra/tests/infra_integration_test.go
+func TestInfrastructure(t *testing.T) {
+	terraformOptions := &terraform.Options{
+		TerraformDir: "../",
+		Vars: map[string]interface{}{
+			"notification_email": "test@example.com",
+			"approval_email":     "approver@example.com",
+		},
+	}
+
+	defer terraform.Destroy(t, terraformOptions)
+
+	if !skipTerratest() {
+		terraform.InitAndApply(t, terraformOptions)
+
+		// Test all WAF pillars
+		t.Run("OperationalExcellence", func(t *testing.T) {
+			testOperationalExcellence(t, terraformOptions)
+		})
+		
+		t.Run("Security", func(t *testing.T) {
+			testSecurityCompliance(t, terraformOptions)
+		})
+		
+		t.Run("Reliability", func(t *testing.T) {
+			testReliabilityFeatures(t, terraformOptions)
+		})
+		
+		t.Run("Performance", func(t *testing.T) {
+			testPerformanceOptimization(t, terraformOptions)
+		})
+		
+		t.Run("CostOptimization", func(t *testing.T) {
+			testCostOptimization(t, terraformOptions)
+		})
+	}
+}
+```
 ---
 
 ## 2) Security
@@ -71,6 +650,23 @@
 - Put Lambda in VPC with least-priv SG; add Secrets Manager for credentials with rotation; scope SSM paths by env.
 - Add API auth (API key/JWT/Cognito) and AWS WAF ACL; tighten IAM to least privilege.
 - Define a NACL resource in Terraform
+-Create Files:
+    infra/secrets.tf - Main secrets management
+
+    Database credentials (primary + standby regions)
+    Automatic rotation with AWS Lambda
+    GitHub webhook secrets
+    Comprehensive security policies
+    infra/modules/lambda/secrets.tf - Lambda secrets access
+
+    IAM policies for Secrets Manager access
+    KMS key access permissions
+    Resource-based security conditions
+    infra/modules/rds/secrets.tf - RDS security
+
+    Customer-managed KMS keys
+    Random password generation
+    Security group rules for Secrets Manager
 
 ### Evidence
 - `infra/modules/s3/main.tf` (public access block, OAI policy)

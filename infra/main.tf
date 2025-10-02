@@ -214,3 +214,31 @@ module "monitoring" {
   
   tags                 = local.common_tags
 }
+
+# Operational Excellence Module - Comprehensive CI/CD Monitoring and Automation
+module "operational_excellence" {
+  source = "./modules/operational-excellence"
+
+  environment              = var.environment
+  notification_email       = var.notification_email
+  approval_email          = var.approval_email
+  
+  # Pipeline configuration (matching variables.tf requirements)
+  infra_pipeline_name      = "project3-infra-pipeline"
+  web_pipeline_name        = "project3-web-pipeline"
+  infra_build_project      = "project3-infra-build"
+  web_build_project        = "project3-web-build"
+  
+  # Infrastructure monitoring
+  lambda_function_name     = module.lambda.lambda_function_name
+  api_gateway_name        = "contact-api"
+  
+  # Terraform state configuration for drift detection
+  terraform_state_bucket  = "project3-terraform-state-1757872273"
+  terraform_state_key     = "project3/terraform.tfstate"
+  
+  tags = local.common_tags
+  
+  # Note: Dependencies are implicit through variable references
+  # Explicit depends_on removed to avoid circular dependencies
+}

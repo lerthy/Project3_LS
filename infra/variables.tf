@@ -60,3 +60,16 @@ variable "route53_zone_id" {
   type        = string
   default     = ""
 }
+
+# Operational Excellence Variables
+variable "notification_email" {
+  description = "Email address for operational notifications (CI/CD failures, alerts)"
+  type        = string
+  default     = ""
+}
+
+variable "approval_email" {
+  description = "Email address for manual approval notifications"
+  type        = string
+  default     = ""
+}
