@@ -101,28 +101,31 @@ resource "aws_sns_topic" "alerts" {
   name = "multi-region-alerts"
 }
 
-# Lambda function to process alerts
-resource "aws_lambda_function" "alert_processor" {
-  filename      = "alert_processor.zip"
-  function_name = "multi-region-alert-processor"
-  role         = aws_iam_role.alert_processor.arn
-  handler      = "index.handler"
-  runtime      = "nodejs18.x"
+# Multi-region monitoring resources (disabled for single-region setup)
+# Uncomment when implementing full multi-region architecture
 
-  environment {
-    variables = {
-      SNS_TOPIC_ARN = aws_sns_topic.alerts.arn
-    }
-  }
-}
+# Lambda function to process alerts
+# resource "aws_lambda_function" "alert_processor" {
+#   filename      = "alert_processor.zip"
+#   function_name = "multi-region-alert-processor"
+#   role         = aws_iam_role.alert_processor.arn
+#   handler      = "index.handler"
+#   runtime      = "nodejs18.x"
+#
+#   environment {
+#     variables = {
+#       SNS_TOPIC_ARN = aws_sns_topic.alerts.arn
+#     }
+#   }
+# }
 
 # Composite alarm for overall system health
-resource "aws_cloudwatch_composite_alarm" "system_health" {
-  alarm_name = "system-health-composite"
-  alarm_description = "Composite alarm for overall system health"
-
-  alarm_rule = "ALARM(${aws_cloudwatch_metric_alarm.primary_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.primary_api_errors.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_api_errors.alarm_name})"
-
-  alarm_actions = [aws_sns_topic.alerts.arn]
-  ok_actions    = [aws_sns_topic.alerts.arn]
-}
+# resource "aws_cloudwatch_composite_alarm" "system_health" {
+#   alarm_name = "system-health-composite"
+#   alarm_description = "Composite alarm for overall system health"
+#
+#   alarm_rule = "ALARM(${aws_cloudwatch_metric_alarm.primary_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_rds_cpu.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.primary_api_errors.alarm_name}) OR ALARM(${aws_cloudwatch_metric_alarm.standby_api_errors.alarm_name})"
+#
+#   alarm_actions = [aws_sns_topic.alerts.arn]
+#   ok_actions    = [aws_sns_topic.alerts.arn]
+# }

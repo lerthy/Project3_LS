@@ -1,33 +1,22 @@
-# Comprehensive cost allocation and tracking tags
+# Common tags for all resources
 locals {
-  # Base cost allocation tags
-  cost_allocation_tags = {
-    Environment   = var.environment
-    Project      = "contact-form"
-    Application  = "web-application"
-    CostCenter   = var.cost_center
-    Owner        = var.owner
-    Team         = var.team
-    ManagedBy    = "terraform"
-    
-    # Cost optimization flags
-    CostOptimized    = "true"
-    AutoShutdown     = var.environment != "production" ? "enabled" : "disabled"
-    BackupRetention  = var.environment == "production" ? "7-days" : "1-day"
-    
-    # Financial tracking
-    BillingProject   = "devops-cicd-project"
-    Department       = "engineering"
+  common_tags = {
+    Environment     = var.environment
+    Project         = "contact-form-webapp"
+    ManagedBy       = "terraform"
+    CostCenter      = "development"
+    Owner           = "devops-team"
+    BusinessUnit    = "engineering" 
+    Application     = "contact-form"
     
     # Operational tags
-    Criticality      = var.environment == "production" ? "high" : "medium"
-    DataClassification = "internal"
+    Purpose         = "web-application"
+    Sustainability  = "enabled"
+    AutoShutdown    = var.environment != "production" ? "enabled" : "disabled"
+    BackupRequired  = var.environment == "production" ? "yes" : "no"
     
-    # Resource lifecycle
-    CreatedDate      = formatdate("YYYY-MM-DD", timestamp())
-    LastModified     = formatdate("YYYY-MM-DD", timestamp())
+    # Compliance tags
+    DataClass       = "internal"
+    Compliance      = "standard"
   }
-  
-  # Merge with existing common tags
-  common_tags = merge(local.cost_allocation_tags, var.additional_tags)
 }

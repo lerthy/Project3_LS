@@ -24,17 +24,7 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-# Use default VPC and its subnets for simplicity
-data "aws_vpc" "default" {
-  default = true
-}
 
-data "aws_subnets" "default_vpc_subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
 
 resource "aws_security_group" "lambda_sg" {
   name_prefix = "lambda-sg-"
@@ -144,7 +134,7 @@ resource "aws_sqs_queue" "lambda_dlq" {
   tags = var.tags
 }
 
-resource "aws_lambda_event_invoke_config" "contact_eic" {
+resource "aws_lambda_function_event_invoke_config" "contact_eic" {
   function_name = aws_lambda_function.contact.function_name
   destination_config {
     on_failure {

@@ -21,6 +21,9 @@ resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
   })
 }
 
+# Data sources
+data "aws_region" "current" {}
+
 # Reliability: Automated failover testing placeholder
 # Implement a script or CI/CD step to simulate Route53 failover and validate standby region activation.
 # Example: Use AWS CLI to disable primary health check and verify DNS switch.
@@ -51,7 +54,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   metric_name         = "Duration"
   namespace           = "AWS/Lambda"
   period              = 60
-  statistic           = "p95"
+  extended_statistic  = "p95"
   threshold           = 3000
   alarm_description   = "Lambda p95 duration exceeds 3s"
   alarm_actions       = var.alarm_actions

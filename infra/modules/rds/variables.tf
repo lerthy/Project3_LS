@@ -16,6 +16,7 @@ variable "dms_subnet_group_id" {
 variable "standby_rds_address" {
   description = "Address of the standby RDS instance in us-west-2"
   type        = string
+  default     = "placeholder.us-west-2.rds.amazonaws.com"
 }
 variable "db_identifier" {
   description = "RDS instance identifier"

@@ -98,11 +98,11 @@ resource "aws_api_gateway_deployment" "contact_deployment" {
   }
 }
 
-# API Gateway Stage with caching enabled
+# API Gateway Stage with caching and access logging
 resource "aws_api_gateway_stage" "contact_stage" {
   deployment_id = aws_api_gateway_deployment.contact_deployment.id
-  rest_api_id  = aws_api_gateway_rest_api.contact_api.id
-  stage_name   = var.stage_name
+  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
+  stage_name    = var.stage_name
 
   cache_cluster_enabled = true
   cache_cluster_size   = "0.5"
@@ -113,30 +113,6 @@ resource "aws_api_gateway_stage" "contact_stage" {
     "cacheMaxAge"  = "300"
     "throttleRate" = "50"
   }
-}
-
-# Method settings for caching
-resource "aws_api_gateway_method_settings" "contact_cache" {
-  rest_api_id = aws_api_gateway_rest_api.contact_api.id
-  stage_name  = aws_api_gateway_stage.contact_stage.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled        = true
-    logging_level         = "INFO"
-    caching_enabled      = true
-    cache_ttl_in_seconds = 300  # 5 minutes cache
-    
-    throttling_burst_limit = 100
-    throttling_rate_limit  = 50
-  }
-}
-# API Gateway Stage with access logging
-
-resource "aws_api_gateway_stage" "contact_stage" {
-  deployment_id = aws_api_gateway_deployment.contact_deployment.id
-  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
-  stage_name    = var.stage_name
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
@@ -157,6 +133,22 @@ resource "aws_api_gateway_stage" "contact_stage" {
   }
 }
 
+# Method settings for caching
+resource "aws_api_gateway_method_settings" "contact_cache" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  stage_name  = aws_api_gateway_stage.contact_stage.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled        = true
+    logging_level         = "INFO"
+    caching_enabled      = true
+    cache_ttl_in_seconds = 300  # 5 minutes cache
+    
+    throttling_burst_limit = 100
+    throttling_rate_limit  = 50
+  }
+}
 # CloudWatch Log Group for API Gateway Access Logs
 resource "aws_cloudwatch_log_group" "api_gw_logs" {
   name              = "/apigw/${aws_api_gateway_rest_api.contact_api.id}/${var.stage_name}"

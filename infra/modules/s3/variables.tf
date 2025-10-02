@@ -1,6 +1,13 @@
 variable "replication_role_arn" {
   description = "ARN of the IAM role for S3 replication"
   type        = string
+  default     = ""
+}
+
+variable "enable_replication" {
+  description = "Enable cross-region replication"
+  type        = bool
+  default     = false
 }
 variable "website_bucket_name" {
   description = "Name of the S3 bucket for website hosting"

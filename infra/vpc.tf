@@ -1,22 +1,5 @@
-# Provider for primary region (us-east-1)
-provider "aws" {
-  region = var.aws_region
-}
-
-# Provider for standby region (us-west-2)
-provider "aws" {
-  alias  = "standby"
-  region = var.standby_region
-}
-
-# Local variables
+# Local variables for VPC
 locals {
-  common_tags = {
-    Project     = "Project3"
-    Environment = "development"
-    ManagedBy   = "terraform"
-  }
-
   primary_azs = ["us-east-1a", "us-east-1b", "us-east-1c"]
   standby_azs = ["us-west-2a", "us-west-2b", "us-west-2c"]
 }

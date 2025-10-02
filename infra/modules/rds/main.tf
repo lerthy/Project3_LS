@@ -51,9 +51,9 @@ resource "aws_dms_replication_task" "rds_to_standby" {
   
   replication_task_id        = "rds-to-standby"
   migration_type             = "cdc"
-  replication_instance_arn   = aws_dms_replication_instance.rds_replication[0].arn
-  source_endpoint_arn        = aws_dms_endpoint.source[0].arn
-  target_endpoint_arn        = aws_dms_endpoint.target[0].arn
+  replication_instance_arn   = aws_dms_replication_instance.rds_replication[0].replication_instance_arn
+  source_endpoint_arn        = aws_dms_endpoint.source[0].endpoint_arn
+  target_endpoint_arn        = aws_dms_endpoint.target[0].endpoint_arn
   table_mappings             = file("${path.module}/dms-table-mappings.json")
   replication_task_settings  = file("${path.module}/dms-task-settings.json")
   tags = var.tags

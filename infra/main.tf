@@ -14,38 +14,24 @@ data "aws_ssm_parameter" "db_name" {
 
 data "aws_caller_identity" "current" {}
 
-# Enhanced cost allocation tags
-locals {
-  common_tags = {
-    # Cost allocation tags
-    Environment     = var.environment
-    Project         = "contact-form-webapp"
-    ManagedBy       = "terraform"
-    CostCenter      = "development"
-    Owner           = "devops-team"
-    BusinessUnit    = "engineering" 
-    Application     = "contact-form"
-    
-    # Operational tags
-    Purpose         = "web-application"
-    Sustainability  = "enabled"
-    AutoShutdown    = var.environment != "production" ? "enabled" : "disabled"
-    BackupRequired  = var.environment == "production" ? "yes" : "no"
-    
-    # Compliance tags
-    DataClass       = "internal"
-    Compliance      = "standard"
-  }
+data "aws_vpc" "default" {
+  default = true
 }
+
+
 
 # S3 Module
 module "s3" {
   source = "./modules/s3"
 
+  providers = {
+    aws.standby = aws.standby
+  }
+
   website_bucket_name   = "my-website-bucket-project3-fresh"
   artifacts_bucket_name = "codepipeline-artifacts-project3-fresh"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
-  replication_role_arn  = var.replication_role_arn
+  enable_replication    = false  # Disabled for now
   tags                  = local.common_tags
 }
 
@@ -72,9 +58,8 @@ module "rds" {
   storage_encrypted   = true
   publicly_accessible = false
   allowed_sg_id       = module.lambda.lambda_security_group_id
-  dms_subnet_ids      = module.primary_vpc.private_subnet_ids
+  dms_subnet_ids      = data.aws_subnets.default_vpc_subnets.ids
   dms_subnet_group_id = "dms-replication-subnet-group"
-  standby_rds_address = module.rds_standby.standby_db_endpoint
   tags                = local.common_tags
 }
 
@@ -136,7 +121,7 @@ module "lambda" {
   lambda_role_name  = "lambda_exec_role_project3"
   aws_region        = var.aws_region
   db_secret_arn     = aws_secretsmanager_secret.db_credentials.arn
-  private_subnet_ids = module.primary_vpc.private_subnet_ids
+  private_subnet_ids = data.aws_subnets.default_vpc_subnets.ids
   tags              = local.common_tags
 }
 
