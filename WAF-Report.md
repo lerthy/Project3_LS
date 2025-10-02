@@ -2379,7 +2379,7 @@ All optimizations are environment-aware and automatically applied based on the `
 - Optimize CloudFront and S3 caching policies (set appropriate Cache-Control headers, enable Brotli/gzip compression).
 - Add Terraform resources for monitoring and reporting carbon footprint (e.g., CloudWatch dashboards, custom metrics).
 - Tag all resources with sustainability-related metadata (e.g., “environment”, “purpose”, “owner”) for tracking and reporting.
-- Audit and optimize static assets (images, JS, CSS) during CI/CD; automate with Terraform and build steps.
+- Images optimized to .webp
 
 ### Evidence
 - `web/static/images/*.webp` (optimized images)
@@ -2463,21 +2463,6 @@ locals {
 
 ```
 
-### 5. CI/CD Asset Optimization
--Automated image, JS, and CSS optimization in build pipeline.
--buildspec-web.yml
-```
-# Optimize static assets (images, JS, CSS)
-  - echo "Optimizing static assets..."
-  - npm --prefix web run optimize:assets || echo "Asset optimization skipped (no script)"
-  - echo "Building static site..."
-```
--package.json
-```
-  "optimize:assets": "npx imagemin static/images/* --out-dir=static/images && npx terser static/js/*.js -o static/js/ --compress --mangle && npx postcss static/css/*.css -o static/css/"
-
-```
----
 
 ## Action Items (Optional)
 - Priority P0:

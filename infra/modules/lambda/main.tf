@@ -86,18 +86,9 @@ resource "aws_iam_role_policy" "lambda_secrets_policy" {
   })
 }
 
-# Connection pooling layer for Lambda
-resource "aws_lambda_layer_version" "pg_pool" {
-  layer_name          = "pg-pool-layer"
-  description         = "PostgreSQL connection pooling layer"
-  filename            = "${path.module}/layers/pg-pool.zip"
-  compatible_runtimes = ["nodejs18.x"]
-}
-
 # Lambda Function with performance optimizations
 resource "aws_lambda_function" "contact" {
   memory_size = 256
-  layers      = [aws_lambda_layer_version.pg_pool.arn]
   filename         = var.lambda_zip_path
   function_name    = var.function_name
   role             = aws_iam_role.lambda_exec.arn

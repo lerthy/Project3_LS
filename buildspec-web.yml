@@ -75,10 +75,6 @@ phases:
         fi
         cd ../..
       
-      # Optimize static assets (images, JS, CSS)
-      - echo "Optimizing static assets for performance..."
-      - npm --prefix web run optimize:assets || echo "Asset optimization skipped (no script)"
-      
       # Generate test reports
       - echo "Generating test reports..."
       - |

@@ -11,15 +11,13 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "build": "npm run lint && npm run test",
-  "deploy": "S3_BUCKET=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && aws s3 sync static/ s3://$S3_BUCKET --delete",
-  "optimize:assets": "npx imagemin static/images/* --out-dir=static/images && npx terser static/js/*.js -o static/js/ --compress --mangle && npx postcss static/css/*.css -o static/css/"
+  "deploy": "S3_BUCKET=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && aws s3 sync static/ s3://$S3_BUCKET --delete"
   },
   "keywords": ["aws", "website", "contact-form"],
   "author": "Polymath Services",
   "license": "MIT",
   "devDependencies": {
     "eslint": "^9.35.0",
-    "postcss": "^8.4.41",
     "stylelint": "^16.0.0",
     "stylelint-config-standard": "^36.0.0",
     "vitest": "^2.1.0",
