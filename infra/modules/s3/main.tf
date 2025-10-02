@@ -94,8 +94,25 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
   }
 }
 
+# S3 Intelligent-Tiering configuration for automatic cost optimization
+resource "aws_s3_bucket_intelligent_tiering_configuration" "website_tiering" {
+  bucket = aws_s3_bucket.website.id
+  name   = "website-intelligent-tiering"
+
+  tiering {
+    access_tier = "ARCHIVE_ACCESS"
+    days        = 90
+  }
+  
+  tiering {
+    access_tier = "DEEP_ARCHIVE_ACCESS"
+    days        = 180
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
   bucket = aws_s3_bucket.website.id
+  
   rule {
     id     = "cleanup_old_versions"
     status = "Enabled"
@@ -109,11 +126,46 @@ resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
       days_after_initiation = 7
     }
   }
+
+  rule {
+    id     = "transition_to_ia"
+    status = "Enabled"
+    filter {
+      prefix = ""
+    }
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+    transition {
+      days          = 365
+      storage_class = "DEEP_ARCHIVE"
+    }
+  }
 }
-#       noncurrent_days = 7
-#     }
-#     abort_incomplete_multipart_upload {
-#       days_after_initiation = 1
-#     }
-#   }
-# }
+
+# Add lifecycle for artifacts bucket too
+resource "aws_s3_bucket_lifecycle_configuration" "artifacts_lifecycle" {
+  bucket = aws_s3_bucket.codepipeline_artifacts.id
+  
+  rule {
+    id     = "cleanup_artifacts"
+    status = "Enabled"
+    filter {
+      prefix = ""
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 7  # Shorter retention for CI/CD artifacts
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+    expiration {
+      days = 90  # Delete old artifacts after 90 days
+    }
+  }
+}

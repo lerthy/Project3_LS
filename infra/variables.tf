@@ -1,3 +1,9 @@
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "development"
+}
+
 variable "replication_role_arn" {
   description = "ARN of the IAM role for S3 replication"
   type        = string

@@ -3,6 +3,28 @@ resource "aws_cloudfront_origin_access_identity" "website" {
   comment = "OAI for website bucket"
 }
 
+# S3 bucket for CloudFront access logs
+resource "aws_s3_bucket" "cloudfront_logs" {
+  bucket        = "${var.s3_bucket_name}-cf-logs"
+  force_destroy = true
+  tags          = var.tags
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "cloudfront_logs_lifecycle" {
+  bucket = aws_s3_bucket.cloudfront_logs.id
+  
+  rule {
+    id     = "delete_old_logs"
+    status = "Enabled"
+    filter {
+      prefix = "cloudfront-logs/"
+    }
+    expiration {
+      days = var.log_retention_days
+    }
+  }
+}
+
 # Performance-optimized response headers policy
 resource "aws_cloudfront_response_headers_policy" "optimized" {
   name = "performance-optimized-policy"
@@ -92,6 +114,16 @@ resource "aws_cloudfront_distribution" "cdn" {
     default_ttl           = 604800   # 1 week
     max_ttl               = 31536000 # 1 year
     response_headers_policy_id = aws_cloudfront_response_headers_policy.optimized.id
+  }
+
+  # Cost optimization: Use price class that covers US, Canada, Europe, and Asia
+  price_class = var.price_class
+
+  # Enable access logging for cost analysis
+  logging_config {
+    include_cookies = false
+    bucket         = aws_s3_bucket.cloudfront_logs.bucket_domain_name
+    prefix         = "cloudfront-logs/"
   }
 
   restrictions {

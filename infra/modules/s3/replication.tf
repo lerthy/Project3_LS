@@ -15,7 +15,7 @@ resource "aws_s3_bucket_replication_configuration" "website_replication" {
     status = "Enabled"
     destination {
       bucket        = aws_s3_bucket.website_standby.arn
-      storage_class = "STANDARD"
+      storage_class = "STANDARD_IA"  # Use IA for cost savings on standby region
     }
     filter {
       prefix = ""

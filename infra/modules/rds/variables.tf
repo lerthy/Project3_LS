@@ -1,3 +1,9 @@
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "development"
+}
+
 variable "dms_subnet_ids" {
   description = "List of subnet IDs for DMS replication subnet group"
   type        = list(string)

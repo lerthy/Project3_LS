@@ -14,15 +14,27 @@ data "aws_ssm_parameter" "db_name" {
 
 data "aws_caller_identity" "current" {}
 
-# Common tags
+# Enhanced cost allocation tags
 locals {
   common_tags = {
-    Environment   = "development"
-    Project       = "assignment"
-    ManagedBy     = "terraform"
-    Purpose       = "sustainability"
-    Owner         = "DevOpsTeam"
-    Sustainability = "true"
+    # Cost allocation tags
+    Environment     = var.environment
+    Project         = "contact-form-webapp"
+    ManagedBy       = "terraform"
+    CostCenter      = "development"
+    Owner           = "devops-team"
+    BusinessUnit    = "engineering" 
+    Application     = "contact-form"
+    
+    # Operational tags
+    Purpose         = "web-application"
+    Sustainability  = "enabled"
+    AutoShutdown    = var.environment != "production" ? "enabled" : "disabled"
+    BackupRequired  = var.environment == "production" ? "yes" : "no"
+    
+    # Compliance tags
+    DataClass       = "internal"
+    Compliance      = "standard"
   }
 }
 
@@ -42,6 +54,9 @@ module "cloudfront" {
   source = "./modules/cloudfront"
 
   s3_bucket_regional_domain_name = module.s3.website_bucket_regional_domain_name
+  s3_bucket_name                 = module.s3.website_bucket_name
+  price_class                    = var.environment == "production" ? "PriceClass_All" : "PriceClass_100"
+  log_retention_days             = var.environment == "production" ? 90 : 30
   tags                           = local.common_tags
 }
 
@@ -49,17 +64,18 @@ module "cloudfront" {
 module "rds" {
   source = "./modules/rds"
 
-  db_identifier = "contact-db-project3"
-  db_username   = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-  db_password   = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
-  db_name       = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  environment         = var.environment
+  db_identifier       = "contact-db-project3"
+  db_username         = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
+  db_password         = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+  db_name             = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
   storage_encrypted   = true
   publicly_accessible = false
   allowed_sg_id       = module.lambda.lambda_security_group_id
   dms_subnet_ids      = module.primary_vpc.private_subnet_ids
   dms_subnet_group_id = "dms-replication-subnet-group"
   standby_rds_address = module.rds_standby.standby_db_endpoint
-  tags          = local.common_tags
+  tags                = local.common_tags
 }
 
 # Secrets Manager secret for DB credentials (username/password/host/name)
@@ -128,11 +144,12 @@ module "lambda" {
 module "api_gateway" {
   source = "./modules/api-gateway"
 
-  api_name          = "contact-api"
-  stage_name        = "dev"
-  lambda_invoke_arn = module.lambda.lambda_invoke_arn
-  aws_region        = var.aws_region
-  tags              = local.common_tags
+  api_name            = "contact-api"
+  stage_name          = "dev"
+  lambda_invoke_arn   = module.lambda.lambda_invoke_arn
+  aws_region          = var.aws_region
+  log_retention_days  = var.environment == "production" ? 90 : 7
+  tags                = local.common_tags
 }
 
 # Lambda permission for API Gateway (created after both modules)
