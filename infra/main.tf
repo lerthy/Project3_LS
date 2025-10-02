@@ -1,17 +1,3 @@
-# SSM parameters for DB credentials (read-only)
-data "aws_ssm_parameter" "db_username" {
-  name = var.db_username_ssm_name
-}
-
-data "aws_ssm_parameter" "db_password" {
-  name            = var.db_password_ssm_name
-  with_decryption = true
-}
-
-data "aws_ssm_parameter" "db_name" {
-  name = var.db_name_ssm_name
-}
-
 data "aws_caller_identity" "current" {}
 
 data "aws_vpc" "default" {
@@ -53,9 +39,9 @@ module "rds" {
 
   environment         = var.environment
   db_identifier       = "contact-db-project3"
-  db_username         = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-  db_password         = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
-  db_name             = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  db_username         = var.db_username
+  db_password         = var.db_password
+  db_name             = var.db_name
   storage_encrypted   = true
   publicly_accessible = false
   allowed_sg_id       = module.lambda.lambda_security_group_id
@@ -74,10 +60,10 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 resource "aws_secretsmanager_secret_version" "db_credentials_version" {
   secret_id     = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
-    username = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-    password = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+    username = var.db_username
+    password = var.db_password
     host     = module.rds.rds_address
-    database = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+    database = var.db_name
     port     = module.rds.rds_port
   })
   depends_on = [module.rds]
@@ -97,10 +83,10 @@ resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
   
   secret_id     = aws_secretsmanager_secret.db_credentials_standby.id
   secret_string = jsonencode({
-    username = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-    password = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
+    username = var.db_username
+    password = var.db_password
     host     = module.rds_standby.standby_db_endpoint
-    database = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+    database = var.db_name
     port     = module.rds_standby.standby_db_port
   })
   depends_on = [module.rds_standby]
@@ -116,9 +102,9 @@ module "rds_standby" {
 
   region             = var.standby_region
   db_identifier      = "contact-db-standby"
-  db_username        = coalesce(var.db_username, data.aws_ssm_parameter.db_username.value)
-  db_password        = coalesce(var.db_password, data.aws_ssm_parameter.db_password.value)
-  db_name           = coalesce(var.db_name, data.aws_ssm_parameter.db_name.value)
+  db_username        = var.db_username
+  db_password        = var.db_password
+  db_name           = var.db_name
   instance_class     = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
   allocated_storage  = 20
   max_allocated_storage = 100

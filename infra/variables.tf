@@ -27,7 +27,7 @@ variable "db_username" {
 }
 
 variable "db_password" {
-  description = "Database password. If empty, read from SSM at db_password_ssm_name"
+  description = "Database password for PostgreSQL database"
   type        = string
   sensitive   = true
   default     = ""
@@ -39,24 +39,7 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-# SSM parameter names for DB credentials (used when corresponding var is empty)
-variable "db_username_ssm_name" {
-  description = "SSM parameter name that stores the database username"
-  type        = string
-  default     = "/project3/db/username"
-}
 
-variable "db_password_ssm_name" {
-  description = "SSM parameter name that stores the database password (SecureString)"
-  type        = string
-  default     = "/project3/db/password"
-}
-
-variable "db_name_ssm_name" {
-  description = "SSM parameter name that stores the Postgres database name"
-  type        = string
-  default     = "/project3/db/name"
-}
 
 
 variable "codestar_connection_arn" {

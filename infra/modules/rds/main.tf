@@ -162,51 +162,6 @@ resource "aws_db_instance" "contact_db" {
   multi_az                = var.environment == "production" ? true : false
   backup_window           = var.backup_window
   maintenance_window      = var.maintenance_window
-  # Cross-region replication example using AWS DMS
-  # You must create source/target endpoints and a replication instance.
-  # Uncomment and configure the following resources as needed:
-
-  # resource "aws_dms_replication_instance" "rds_replication" {
-  #   allocated_storage    = 100
-  #   replication_instance_class = "dms.t3.medium"
-  #   engine_version      = "3.4.6"
-  #   publicly_accessible = false
-  #   multi_az            = true
-  #   tags = var.tags
-  # }
-
-  # resource "aws_dms_endpoint" "source" {
-  #   endpoint_id = "source-endpoint"
-  #   endpoint_type = "source"
-  #   engine_name = "postgres"
-  #   username = var.db_username
-  #   password = var.db_password
-  #   server_name = aws_db_instance.contact_db.address
-  #   port = 5432
-  #   database_name = var.db_name
-  # }
-
-  # resource "aws_dms_endpoint" "target" {
-  #   endpoint_id = "target-endpoint"
-  #   endpoint_type = "target"
-  #   engine_name = "postgres"
-  #   username = var.db_username
-  #   password = var.db_password
-  #   server_name = module.rds_standby.rds_address
-  #   port = 5432
-  #   database_name = var.db_name
-  # }
-
-  # resource "aws_dms_replication_task" "rds_to_standby" {
-  #   replication_task_id          = "rds-to-standby"
-  #   migration_type               = "cdc"
-  #   replication_instance_arn    = aws_dms_replication_instance.rds_replication.arn
-  #   source_endpoint_arn         = aws_dms_endpoint.source.arn
-  #   target_endpoint_arn         = aws_dms_endpoint.target.arn
-  #   table_mappings              = file("${path.module}/dms-table-mappings.json")
-  #   replication_task_settings   = file("${path.module}/dms-task-settings.json")
-  #   tags = var.tags
-  # }
 
   # Security but Free Tier friendly
   storage_encrypted   = var.storage_encrypted
