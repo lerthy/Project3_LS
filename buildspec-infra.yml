@@ -39,6 +39,11 @@ phases:
       - echo "Checking Terraform formatting..."
       - terraform -chdir=infra fmt -recursive
       - terraform -chdir=infra fmt -check -recursive
+      - echo "Create Lambda ZIP files for validation"
+      - echo "Creating disaster recovery Lambda ZIP..."
+      - (cd infra/modules/disaster-recovery && zip -r disaster_recovery.zip disaster_recovery.py || echo "disaster_recovery.py not found, creating empty zip" && touch empty.txt && zip disaster_recovery.zip empty.txt)
+      - echo "Creating RPO enhancement Lambda ZIP..."
+      - (cd infra/modules/rpo-enhancement && zip -r hourly_backup.zip hourly_backup.py || echo "hourly_backup.py not found, creating empty zip" && touch empty.txt && zip hourly_backup.zip empty.txt)
       - echo "Terraform validation"
       - echo "Validating Terraform configuration..."
       - terraform -chdir=infra init -backend=false
