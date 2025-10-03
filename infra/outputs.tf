@@ -64,13 +64,13 @@ output "web_webhook_url" {
 
 output "db_secret_arn" {
   description = "ARN of the database credentials secret in Secrets Manager"
-  value       = aws_secretsmanager_secret.db_credentials.arn
+  value       = data.aws_secretsmanager_secret.db_credentials.arn
   sensitive   = true
 }
 
 output "db_secret_name" {
   description = "Name of the database credentials secret in Secrets Manager"
-  value       = aws_secretsmanager_secret.db_credentials.name
+  value       = data.aws_secretsmanager_secret.db_credentials.name
 }
 
 output "db_secret_standby_arn" {

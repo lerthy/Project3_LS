@@ -7,6 +7,35 @@ data "aws_vpc" "default" {
 
 
 # S3 Module
+# VPC Module - Primary Region
+module "primary_vpc" {
+  source = "./modules/vpc"
+
+  environment         = "primary"
+  vpc_cidr           = "10.0.0.0/16"
+  public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnet_cidrs = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  availability_zones = var.primary_availability_zones
+  tags               = local.common_tags
+}
+
+# VPC Module - Standby Region
+module "standby_vpc" {
+  source = "./modules/vpc"
+
+  providers = {
+    aws = aws.standby
+  }
+
+  environment         = "standby"
+  vpc_cidr           = "10.2.0.0/16"
+  public_subnet_cidrs = ["10.2.1.0/24", "10.2.2.0/24", "10.2.3.0/24"]
+  private_subnet_cidrs = ["10.2.4.0/24", "10.2.5.0/24", "10.2.6.0/24"]
+  availability_zones = var.standby_availability_zones
+  tags               = local.common_tags
+}
+
+# S3 Module
 module "s3" {
   source = "./modules/s3"
 
@@ -77,7 +106,7 @@ module "lambda" {
   lambda_zip_path   = "lambda.zip"
   lambda_role_name  = "lambda_exec_role_project3"
   aws_region        = var.aws_region
-  db_secret_arn     = aws_secretsmanager_secret.db_credentials.arn
+  db_secret_arn     = data.aws_secretsmanager_secret.db_credentials.arn
   private_subnet_ids = data.aws_subnets.default_vpc_subnets.ids
   tags              = local.common_tags
 }
@@ -177,9 +206,9 @@ module "codepipeline" {
   codebuild_role_arn       = module.iam.codebuild_role_arn
   codepipeline_role_arn    = module.iam.codepipeline_role_arn
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
-  codestar_connection_arn  = var.codestar_connection_arn
+  codestar_connection_arn  = ""  # Will be set by the module itself
   repository_id            = "lerthy/Project3_LS"
-  branch_name              = "develop"
+  branch_name              = "project4"
   aws_region               = var.aws_region
   infra_path_filters       = ["infra/**/*"]
   web_path_filters         = ["web/**/*"]

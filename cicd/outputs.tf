@@ -27,3 +27,13 @@ output "web_webhook_url" {
   description = "Webhook URL for web pipeline"
   value       = aws_codepipeline_webhook.web_webhook.url
 }
+
+output "codestar_connection_arn" {
+  description = "ARN of the CodeStar Connection to GitHub"
+  value       = aws_codestarconnections_connection.github.arn
+}
+
+output "codestar_connection_status" {
+  description = "Status of the CodeStar Connection to GitHub"
+  value       = aws_codestarconnections_connection.github.connection_status
+}

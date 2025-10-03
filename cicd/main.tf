@@ -1,3 +1,16 @@
+# CodeStar Connection for GitHub
+resource "aws_codestarconnections_connection" "github" {
+  name          = "github-connection-project3"
+  provider_type = "GitHub"
+  
+  tags = var.tags
+}
+
+# Data source for GitHub webhook secret
+data "aws_secretsmanager_secret_version" "github_token" {
+  secret_id = "project3/github-webhook"
+}
+
 # CodeBuild Projects
 resource "aws_codebuild_project" "infra_build" {
   name          = var.infra_build_project_name
@@ -93,10 +106,9 @@ resource "aws_codepipeline" "infra_pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn    = var.codestar_connection_arn
-        FullRepositoryId = var.repository_id
-        BranchName       = var.branch_name
-        DetectChanges    = "true"
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        FullRepositoryId     = var.repository_id
+        BranchName          = var.branch_name
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -142,10 +154,9 @@ resource "aws_codepipeline" "web_pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn    = var.codestar_connection_arn
-        FullRepositoryId = var.repository_id
-        BranchName       = var.branch_name
-        DetectChanges    = "true"
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        FullRepositoryId     = var.repository_id
+        BranchName          = var.branch_name
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -213,3 +224,5 @@ resource "aws_codepipeline_webhook" "web_webhook" {
     match_equals = "web/**"
   }
 }
+
+

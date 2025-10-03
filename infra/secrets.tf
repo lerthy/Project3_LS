@@ -7,18 +7,13 @@
 # Primary Region Database Credentials
 # ============================================================================
 
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "project3/db-credentials"
-  description = "Database credentials for contact form"
-
-  tags = merge(local.common_tags, {
-    Name = "project3-db-credentials"
-    Type = "database-credentials"
-  })
+# Use data source to reference existing secret
+data "aws_secretsmanager_secret" "db_credentials" {
+  name = "project3/db-credentials"
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_version" {
-  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_id = data.aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = var.db_username
     password = var.db_password
@@ -72,6 +67,9 @@ data "aws_subnets" "default_vpc_subnets" {
   }
 }
 
+# Temporarily commented out due to Python runtime compatibility issues
+# Will be re-enabled after main infrastructure is deployed
+/*
 resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotation" {
   name           = "SecretsManagerRDSPostgreSQLRotationSingleUser"
   application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser"
@@ -84,12 +82,12 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotatio
   }
 
   capabilities     = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
-  semantic_version = "1.1.188"
+  semantic_version = "1.1.348"
   tags             = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_rotation" "db_rotation" {
-  secret_id           = aws_secretsmanager_secret.db_credentials.id
+  secret_id           = data.aws_secretsmanager_secret.db_credentials.id
   rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.rds_rotation.outputs["RotationLambdaARN"]
 
   rotation_rules {
@@ -98,6 +96,7 @@ resource "aws_secretsmanager_secret_rotation" "db_rotation" {
 
   depends_on = [aws_secretsmanager_secret_version.db_credentials_version]
 }
+*/
 
 # GitHub Webhook Secret (for CI/CD)
 # ============================================================================

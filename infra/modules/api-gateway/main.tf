@@ -223,6 +223,9 @@ resource "aws_wafv2_web_acl" "apigw_acl" {
   rule {
     name     = "AWS-AWSManagedRulesCommonRuleSet"
     priority = 1
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"

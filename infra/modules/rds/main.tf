@@ -1,8 +1,53 @@
+resource "aws_iam_role" "dms_vpc_role" {
+  name = "dms-vpc-role-project3"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "dms.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "dms_vpc_policy" {
+  name = "dms-vpc-policy-project3"
+  role = aws_iam_role.dms_vpc_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVpcs",
+          "ec2:ModifyNetworkInterfaceAttribute",
+          "ec2:CreateTags"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_dms_replication_subnet_group" "dms_subnet_group" {
   replication_subnet_group_id = "dms-replication-subnet-group"
   subnet_ids                  = var.dms_subnet_ids
   tags                       = var.tags
   replication_subnet_group_description = "Subnet group for DMS replication instance"
+
+  depends_on = [aws_iam_role.dms_vpc_role]
 }
 resource "aws_dms_replication_instance" "rds_replication" {
   count = var.environment == "production" ? 1 : 0  # Only create DMS for production
@@ -117,21 +162,24 @@ resource "aws_security_group" "rds_ingress" {
 # Optimized parameter group for PostgreSQL
 resource "aws_db_parameter_group" "contact_db_params" {
   name   = "contact-db-params"
-  family = "postgres14"
+  family = "postgres15"
 
   parameter {
-    name  = "shared_buffers"
-    value = "{DBInstanceClassMemory*20/100}"  # 20% of instance memory
+    name         = "shared_buffers"
+    value        = "{DBInstanceClassMemory*20/100}"  # 20% of instance memory
+    apply_method = "pending-reboot"
   }
 
   parameter {
-    name  = "work_mem"
-    value = "8388608"  # 8MB
+    name         = "work_mem"
+    value        = "8388608"  # 8MB
+    apply_method = "pending-reboot"
   }
 
   parameter {
-    name  = "max_connections"
-    value = "100"
+    name         = "max_connections"
+    value        = "100"
+    apply_method = "pending-reboot"
   }
 
   tags = var.tags

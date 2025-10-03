@@ -29,9 +29,9 @@ resource "aws_lambda_function_url" "contact_direct" {
   cors {
     allow_credentials = false
     allow_origins     = ["*"]
-    allow_methods     = ["POST", "OPTIONS"]
-    allow_headers     = ["date", "keep-alive", "content-type"]
-    expose_headers    = ["date", "keep-alive"]
+    allow_methods     = ["POST"]
+    allow_headers     = ["content-type", "authorization"]
+    expose_headers    = ["content-type"]
     max_age           = 86400
   }
 }

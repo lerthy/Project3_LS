@@ -13,6 +13,7 @@
          +-------------------------+    +-------------------------+
          |        VPC             |    |         VPC            |
          |  +------------------+  |    |  +------------------+  |
+         |  | Availability Zone|  |    |  | Availability Zone|  |
          |  |    +--------+    |  |    |  |    +--------+    |  |
          |  |    |  API   |    |  |    |  |    |  API   |    |  |
          |  |    |Gateway |    |  |    |  |    |Gateway |    |  |
@@ -31,8 +32,7 @@
          |  |         |        |  |    |  |         |        |  |
          |  |    +---------+   |  |    |  |    +---------+   |  |
          |  |    |   S3    |   |  |    |  |    |   S3    |   |  |
-         |  |    | Website |<--|--|----|----|----| Replica|   |  |
-         |  |    | Bucket  |   |  |    |  |    | Bucket |   |  |
+         |  |    | Bucket  |<--|--|----|----|----| Bucket |   |  |
          |  |    +---------+   |  |    |  |    +---------+   |  |
          |  +------------------+  |    |  +------------------+  |
          +-------------------------+    +-------------------------+
@@ -67,13 +67,13 @@
    ```
 
 3. **Lambda & API Gateway**
-   - Single API Gateway endpoint for contact form
-   - One Lambda function for form processing
+   - API Gateway endpoints for contact form
+   - Lambda functions for processing
    - Security group access to RDS
 
 4. **S3 Configuration**
-   - Static website hosting bucket
-   - Cross-region replication to standby region
+   - Website hosting bucket
+   - Cross-region replication enabled
 
 ### Standby Region (US-WEST-2)
 

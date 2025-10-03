@@ -83,9 +83,9 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
           view    = "timeSeries"
           stacked = false
           metrics = [
-            # Route53 health check metrics
-            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.primary_health_check_id ],
-            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.standby_health_check_id ]
+            # Route53 health check metrics (only if health check IDs are provided)
+            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.primary_health_check_id != "" ? var.primary_health_check_id : "example-health-check-1" ],
+            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.standby_health_check_id != "" ? var.standby_health_check_id : "example-health-check-2" ]
           ]
           period = 60
           region = "us-east-1" # Route53 metrics are always in us-east-1

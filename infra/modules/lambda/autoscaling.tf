@@ -1,10 +1,12 @@
-# Lambda Auto Scaling Configuration
+# Lambda Auto Scaling Configuration - target the alias for provisioned concurrency
 resource "aws_appautoscaling_target" "lambda_target" {
   max_capacity       = 10
   min_capacity       = 2
-  resource_id        = "function:${aws_lambda_function.contact.function_name}"
+  resource_id        = "function:${aws_lambda_function.contact.function_name}:${aws_lambda_alias.contact_live.name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
+  
+  depends_on = [aws_lambda_alias.contact_live]
 }
 
 # Scale based on utilization
@@ -21,13 +23,6 @@ resource "aws_appautoscaling_policy" "lambda_utilization" {
     }
     target_value = 0.75
   }
-}
-
-# Provisioned concurrency config for existing Lambda function
-resource "aws_lambda_provisioned_concurrency_config" "contact_form" {
-  function_name                     = aws_lambda_function.contact.function_name
-  provisioned_concurrent_executions = 2
-  qualifier                        = aws_lambda_function.contact.version
 }
 
 # CloudWatch alarms for Lambda monitoring

@@ -88,45 +88,86 @@ resource "aws_iam_role_policy" "lambda_secrets_policy" {
 
 # Lambda Function with performance optimizations
 resource "aws_lambda_function" "contact" {
-  memory_size = 256
-  filename         = var.lambda_zip_path
+  filename         = "lambda-deployment.zip"
   function_name    = var.function_name
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "index.handler"
-  runtime          = var.runtime
-  timeout          = var.timeout
-  source_code_hash = fileexists(var.lambda_zip_path) ? filebase64sha256(var.lambda_zip_path) : null
-  reserved_concurrent_executions = 5
+  role            = aws_iam_role.lambda_exec.arn
+  handler         = "index.handler"
+  runtime         = "python3.9"
+  timeout         = var.timeout
+  memory_size     = 128
+  publish         = true
   
-  # Customer-managed KMS encryption for environment variables
-  kms_key_arn = aws_kms_key.lambda_env_encryption.arn
-  
-  vpc_config {
-    subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
-    security_group_ids = [aws_security_group.lambda_sg.id]
+  # Dead Letter Queue Configuration
+  dead_letter_config {
+    target_arn = aws_sqs_queue.lambda_dlq.arn
   }
+
+  # Environment variables (using Secrets Manager for DB credentials)
   environment {
     variables = {
-      NODE_OPTIONS = "--enable-source-maps"
-      POSTGRES_MAX_CONNECTIONS = "10"
-      ENVIRONMENT = "development"
-      DB_SECRET_ARN = var.db_secret_arn
+      DB_SECRET_ARN    = var.db_secret_arn
+      DLQ_URL          = aws_sqs_queue.lambda_dlq.url
     }
   }
+
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_logs,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+    aws_iam_role_policy.lambda_secrets_policy,
+  ]
+
   tags = var.tags
+}
+
+# Lambda Alias for versioning (required for provisioned concurrency)
+resource "aws_lambda_alias" "contact_live" {
+  name             = "live"
+  description      = "Live version of the Lambda function"
+  function_name    = aws_lambda_function.contact.function_name
+  function_version = "1"
+
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 # Provisioned concurrency config for Lambda
-resource "aws_lambda_provisioned_concurrency_config" "contact" {
-  function_name                     = aws_lambda_function.contact.function_name
-  provisioned_concurrent_executions = 2
-  qualifier                        = aws_lambda_function.contact.version
-}
+# Lambda Provisioned Concurrency disabled due to AWS account limits
+# resource "aws_lambda_provisioned_concurrency_config" "contact" {
+#   function_name                     = aws_lambda_function.contact.function_name
+#   provisioned_concurrent_executions = 1
+#   qualifier                        = aws_lambda_alias.contact_live.name
+# }
 
 # Dead-letter queue for Lambda failures
 resource "aws_sqs_queue" "lambda_dlq" {
-  name = "contact-form-dlq"
+  name = "${var.function_name}-dlq"
   tags = var.tags
+}
+
+# IAM policy for Lambda to access SQS DLQ
+resource "aws_iam_role_policy" "lambda_sqs_policy" {
+  name = "lambda-sqs-access"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.lambda_dlq.arn
+      }
+    ]
+  })
 }
 
 resource "aws_lambda_function_event_invoke_config" "contact_eic" {
@@ -138,6 +179,8 @@ resource "aws_lambda_function_event_invoke_config" "contact_eic" {
   }
   maximum_retry_attempts      = 2
   maximum_event_age_in_seconds = 3600
+  
+  depends_on = [aws_iam_role_policy.lambda_sqs_policy]
 }
 
 # Lambda permission is handled in the main configuration to avoid circular dependency

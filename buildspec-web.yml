@@ -2,8 +2,8 @@ version: 0.2
 
 env:
   variables:
-    AWS_DEFAULT_REGION: us-east-1
-    AWS_REGION: us-east-1
+    AWS_DEFAULT_REGION: eu-north-1
+    AWS_REGION: eu-north-1
     TF_VAR_notification_email: ${NOTIFICATION_EMAIL}
     TF_VAR_approval_email: ${APPROVAL_EMAIL}
     TF_VAR_environment: ${ENVIRONMENT}
