@@ -94,8 +94,7 @@ phases:
   build:
     commands:
       - echo "=== OPERATIONAL EXCELLENCE: Infrastructure Testing ==="
-      
-      # Run comprehensive Terratest for production, quick tests for dev
+      - echo "Run comprehensive Terratest for production, quick tests for dev"
       - |
         if [ "$TF_VAR_environment" = "production" ]; then
           echo "Running full Terratest suite for production..."
@@ -104,8 +103,7 @@ phases:
           echo "Running quick tests for development environment..."
           CI_SKIP_TERRATEST=1 go -C infra test -v -short -run TestInfra ./tests/
         fi
-      
-      # Generate test reports
+      - echo "Generate test reports"
       - echo "Generating test reports..."
       - |
         go -C infra test -v -json -run TestInfra ./tests/ > test-results.json || echo "Test execution completed"
@@ -121,8 +119,7 @@ phases:
   post_build:
     commands:
       - echo "=== OPERATIONAL EXCELLENCE: Post-Deployment Validation ==="
-      
-      # Validate deployment health
+      - echo "Validate deployment health"
       - echo "Validating infrastructure health..."
       - |
         cd infra
@@ -136,8 +133,7 @@ phases:
             aws lambda get-function --function-name "$FUNCTION_NAME" --region us-east-1 || echo "Lambda validation completed"
           fi
         fi
-        
-      # Test operational monitoring
+      - echo "Test operational monitoring"
       - echo "Testing operational monitoring setup..."
       - |
         # Validate CloudWatch alarms exist
@@ -164,11 +160,9 @@ phases:
         fi
         
       - echo "Infrastructure deployment and operational validation completed successfully"
-      
-      # Create Lambda deployment package
+      - echo "Create Lambda deployment package"
       - (cd web/lambda && zip -r ../../infra/lambda.zip .)
-      
-      # Terraform init with backend
+      - echo "Terraform init with backend"
       - |
         if [ -n "$TF_STATE_BUCKET" ] && [ -n "$TF_STATE_KEY" ] && [ -n "$TF_STATE_REGION" ] && [ -n "$TF_STATE_TABLE" ]; then
           echo "Initializing Terraform with S3 backend..."
@@ -183,13 +177,11 @@ phases:
           terraform -chdir=infra init
         fi
       
-      # Clean state validation (optional)
+      - echo "Clean state validation (optional)"
       - echo "Validating Terraform state consistency..."
-      
-      # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
+      - echo "Terraform plan (full plan to ensure API methods/CORS are deployed correctly)"
       - terraform -chdir=infra plan -out=tfplan
-      
-      # Terraform apply (only if not a PR)
+      - echo "Terraform apply (only if not a PR)"
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
