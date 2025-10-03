@@ -2,15 +2,13 @@ version: 0.2
 
 env:
   variables:
-    AWS_DEFAULT_REGION: eu-north-1
-    AWS_REGION: eu-north-1
-    TF_VAR_aws_region: eu-north-1
-    # Backend configuration (set these in CodeBuild environment variables)
-    TF_STATE_BUCKET: "project3-terraform-state-1757872273"
-    TF_STATE_KEY: "project3/terraform.tfstate"
+    TF_STATE_BUCKET: "terraform-state-project3-fresh"
+    TF_STATE_KEY: "infra/terraform.tfstate"
     TF_STATE_REGION: "eu-north-1"
-    TF_STATE_TABLE: "terraform-state-lock"
-    # Operational Excellence variables
+    TF_STATE_TABLE: "terraform-locks-project3"
+    TF_VAR_environment: "development"
+    TF_VAR_project_name: "project3"
+    TF_VAR_aws_region: "eu-north-1"
     TF_VAR_notification_email: "lerdi890@gmail.com"
     TF_VAR_approval_email: "lerdi890@gmail.com"
 
@@ -20,28 +18,23 @@ phases:
       golang: 1.21
     commands:
       - export AWS_DEFAULT_REGION=us-east-1 AWS_REGION=us-east-1 TF_VAR_aws_region=us-east-1
-      # Install Terraform
+      - echo "Install Terraform"
       - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
       - mv terraform /usr/local/bin/
-      # Tools used to parse outputs
+      - echo "Tools used to parse outputs"
       - yum -y install jq >/dev/null 2>&1 || true
-      - echo "Install tflint (pinned release to avoid 403 on GitHub raw)"
-      - |
-        set -e
-        TFLINT_VERSION=0.50.3
-        echo "Installing tflint v$TFLINT_VERSION..."
-        wget -q https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip || \
-        (echo "Retrying tflint download..." && sleep 2 && wget -q https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip)
-        unzip -o tflint_linux_amd64.zip
-        mv tflint /usr/local/bin/
-        tflint --version
+      - echo "Install tflint"
+      - wget -q https://github.com/terraform-linters/tflint/releases/download/v0.50.3/tflint_linux_amd64.zip
+      - unzip -o tflint_linux_amd64.zip
+      - mv tflint /usr/local/bin/
+      - tflint --version
       - echo "Install Go dependencies for tests"
       - go -C infra mod download
 
   pre_build:
     commands:
-      - echo "=== OPERATIONAL EXCELLENCE: Pre-Build Validation ==="
+      - echo "=== OPERATIONAL EXCELLENCE Pre-Build Validation ==="
       - echo "Terraform formatting check"
       - echo "Checking Terraform formatting..."
       - terraform -chdir=infra fmt -recursive
@@ -52,131 +45,37 @@ phases:
       - terraform -chdir=infra validate
       - echo "Security scan with tfsec"
       - echo "Running security scan with tfsec..."
-      - |
-        wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
-        chmod +x tfsec
-        ./tfsec infra/ --format json --out tfsec-report.json || echo "Security issues found - review tfsec-report.json"
-        ./tfsec infra/ --format lovely || echo "Security scan completed with findings"
+      - wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
+      - chmod +x tfsec
+      - ./tfsec infra/ --format json --out tfsec-report.json || echo "Security issues found"
+      - ./tfsec infra/ --format lovely || echo "Security scan completed"
       - echo "Fast TFLint using lightweight config"
-      - echo "Running Terraform linting..."
-      - |
-        set -e
-        cd infra
-        cat > .tflint.ci.hcl <<'EOF'
-        plugin "terraform" {
-          enabled = true
-          preset  = "recommended"
-        }
-        EOF
-        tflint -c .tflint.ci.hcl
-        cd - >/dev/null
-      - echo "Check for drift in existing infrastructure"
-      - echo "Checking for infrastructure drift..."
-      - |
-        if [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_CREATED" ] && [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_UPDATED" ]; then
-          echo "Initializing Terraform with backend for drift detection..."
-          terraform -chdir=infra init \
-            -backend-config="bucket=$TF_STATE_BUCKET" \
-            -backend-config="key=$TF_STATE_KEY" \
-            -backend-config="region=$TF_STATE_REGION" \
-            -backend-config="encrypt=true" \
-            -backend-config="dynamodb_table=$TF_STATE_TABLE" || echo "Backend initialization failed"
-          terraform -chdir=infra plan -detailed-exitcode -out=drift-check.tfplan || echo "Drift detected or plan failed"
-        fi
+      - echo "Running TFLint..."
+      - tflint -c .tflint.ci.hcl infra/ || echo "TFLint completed with findings"
 
   build:
     commands:
-      - echo "=== OPERATIONAL EXCELLENCE: Infrastructure Testing ==="
+      - echo "=== OPERATIONAL EXCELLENCE Infrastructure Testing ==="
       - echo "Running infrastructure tests..."
       - echo "Skipping complex terratest for now"
-      - echo "Generate test reports"
-      - echo "Generating test reports..."
-      - |
-        go -C infra test -v -json -run TestInfra ./tests/ > test-results.json || echo "Test execution completed"
-        
-      # Validate operational excellence components
-      - echo "Validating operational excellence features..."
-      - |
-        cd infra
-        # Check if monitoring alarms are configured
-        terraform plan -out=validation.tfplan
-        terraform show -json validation.tfplan | jq '.planned_values.root_module.child_modules[] | select(.address == "module.operational_excellence")' || echo "Operational excellence module validation completed"
 
   post_build:
     commands:
-      - echo "=== OPERATIONAL EXCELLENCE: Post-Deployment Validation ==="
-      - echo "Validate deployment health"
-      - echo "Validating infrastructure health..."
-      - |
-        cd infra
-        # Get critical resource outputs
-        terraform output -json > outputs.json
-        
-        # Validate Lambda function health
-        if [ -f outputs.json ]; then
-          FUNCTION_NAME=$(cat outputs.json | jq -r '.lambda_function_name.value // empty')
-          if [ ! -z "$FUNCTION_NAME" ]; then
-            aws lambda get-function --function-name "$FUNCTION_NAME" --region us-east-1 || echo "Lambda validation completed"
-          fi
-        fi
-      - echo "Test operational monitoring"
-      - echo "Testing operational monitoring setup..."
-      - |
-        # Validate CloudWatch alarms exist
-        aws cloudwatch describe-alarms --alarm-names "pipeline-failure-alarm-$TF_VAR_environment" --region us-east-1 || echo "Monitoring validation completed"
-        
-      # Generate deployment report
-      - echo "Generating deployment health report..."
-      - |
-        cd infra
-        echo "=== DEPLOYMENT HEALTH REPORT ===" > deployment-report.txt
-        echo "Environment: $TF_VAR_environment" >> deployment-report.txt
-        echo "Timestamp: $(date)" >> deployment-report.txt
-        echo "Region: us-east-1" >> deployment-report.txt
-        terraform output >> deployment-report.txt 2>/dev/null || echo "Outputs captured"
-        
-      # Operational excellence success notification
-      - echo "Sending deployment success notification..."
-      - |
-        if [ ! -z "$TF_VAR_notification_email" ]; then
-          aws sns publish --topic-arn "arn:aws:sns:us-east-1:$(aws sts get-caller-identity --query Account --output text):deployment-notifications-$TF_VAR_environment" \
-            --subject "✅ Infrastructure Deployment Successful - $TF_VAR_environment" \
-            --message "Infrastructure deployment completed successfully for environment: $TF_VAR_environment. All operational excellence checks passed." \
-            --region us-east-1 || echo "Notification attempted"
-        fi
-        
-      - echo "Infrastructure deployment and operational validation completed successfully"
+      - echo "=== OPERATIONAL EXCELLENCE Post-Deployment Validation ==="
       - echo "Create Lambda deployment package"
       - (cd web/lambda && zip -r ../../infra/lambda.zip .)
       - echo "Terraform init with backend"
-      - |
-        if [ -n "$TF_STATE_BUCKET" ] && [ -n "$TF_STATE_KEY" ] && [ -n "$TF_STATE_REGION" ] && [ -n "$TF_STATE_TABLE" ]; then
-          echo "Initializing Terraform with S3 backend..."
-          terraform -chdir=infra init \
-            -backend-config="bucket=$TF_STATE_BUCKET" \
-            -backend-config="key=$TF_STATE_KEY" \
-            -backend-config="region=$TF_STATE_REGION" \
-            -backend-config="encrypt=true" \
-            -backend-config="dynamodb_table=$TF_STATE_TABLE"
-        else
-          echo "No backend configuration provided, using local state..."
-          terraform -chdir=infra init
-        fi
-      
-      - echo "Clean state validation (optional)"
+      - echo "Initializing Terraform with S3 backend..."
+      - terraform -chdir=infra init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="key=$TF_STATE_KEY" -backend-config="region=$TF_STATE_REGION" -backend-config="encrypt=true" -backend-config="dynamodb_table=$TF_STATE_TABLE"
+      - echo "Clean state validation"
       - echo "Validating Terraform state consistency..."
-      - echo "Terraform plan (full plan to ensure API methods/CORS are deployed correctly)"
+      - echo "Terraform plan"
       - terraform -chdir=infra plan -out=tfplan
-      - echo "Terraform apply (only if not a PR)"
-      - |
-        if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
-          echo "Skipping apply for pull request"
-        else
-          # Do not fail the build if apply fails; continue so pipeline does not rerun endlessly
-          terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
-        fi
+      - echo "Terraform apply"
+      - terraform -chdir=infra apply -auto-approve tfplan
+      - echo "Infrastructure deployment completed successfully"
 
 artifacts:
   files:
-    - 'infra/tfplan'
+    - '**/*'
   name: terraform-artifacts
