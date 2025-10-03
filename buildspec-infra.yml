@@ -69,11 +69,15 @@ phases:
       - echo "=== OPERATIONAL EXCELLENCE Post-Deployment Validation ==="
       - echo "Create Lambda deployment package"
       - (cd web/lambda && zip -r ../../infra/lambda.zip .)
-      - echo "Terraform init with backend"
-      - echo "Initializing Terraform with S3 backend..."
-      - terraform -chdir=infra init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="key=$TF_STATE_KEY" -backend-config="region=$TF_STATE_REGION" -backend-config="encrypt=true" -backend-config="dynamodb_table=$TF_STATE_TABLE"
-      - echo "Clean state validation"
-      - echo "Validating Terraform state consistency..."
+      - echo "Check if S3 backend exists and initialize appropriately"
+      - |
+        if aws s3api head-bucket --bucket "$TF_STATE_BUCKET" --region "$TF_STATE_REGION" 2>/dev/null; then
+          echo "S3 backend exists, initializing with remote backend..."
+          terraform -chdir=infra init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="key=$TF_STATE_KEY" -backend-config="region=$TF_STATE_REGION" -backend-config="encrypt=true" -backend-config="dynamodb_table=$TF_STATE_TABLE"
+        else
+          echo "S3 backend does not exist, initializing with local backend for initial deployment..."
+          terraform -chdir=infra init
+        fi
       - echo "Terraform plan"
       - terraform -chdir=infra plan -out=tfplan
       - echo "Terraform apply"
