@@ -242,3 +242,51 @@ module "operational_excellence" {
   # Note: Dependencies are implicit through variable references
   # Explicit depends_on removed to avoid circular dependencies
 }
+
+# Disaster Recovery Module - Automated Failover Orchestration
+module "disaster_recovery" {
+  source = "./modules/disaster-recovery"
+
+  environment               = var.environment
+  primary_region           = var.aws_region
+  standby_region           = var.standby_region
+  primary_rds_identifier   = module.rds.rds_identifier
+  standby_rds_identifier   = module.rds_standby.standby_db_identifier
+  route53_zone_id         = var.route53_zone_id
+  primary_health_check_id = length(module.route53) > 0 ? module.route53[0].primary_health_check_id : ""
+  primary_lambda_name     = module.lambda.lambda_function_name
+  standby_lambda_name     = module.lambda_standby.lambda_function_name
+  notification_email      = var.notification_email
+  
+  tags = local.common_tags
+  
+  depends_on = [
+    module.rds,
+    module.rds_standby,
+    module.lambda,
+    module.lambda_standby,
+    module.route53
+  ]
+}
+
+# RPO Enhancement Module - Hourly Backups for 1-Hour RPO
+module "rpo_enhancement" {
+  source = "./modules/rpo-enhancement"
+
+  environment              = var.environment
+  primary_region          = var.aws_region
+  standby_region          = var.standby_region
+  primary_rds_identifier  = module.rds.rds_identifier
+  standby_rds_identifier  = module.rds_standby.standby_db_identifier
+  backup_retention_hours  = var.environment == "production" ? 168 : 72  # 7 days prod, 3 days dev
+  backup_bucket_name      = "project3-rpo-backup-metadata-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  dms_task_arn           = var.environment == "production" ? module.rds.dms_task_arn : ""
+  notification_email     = var.notification_email
+  
+  tags = local.common_tags
+  
+  depends_on = [
+    module.rds,
+    module.rds_standby
+  ]
+}

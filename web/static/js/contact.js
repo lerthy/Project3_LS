@@ -23,9 +23,6 @@ class ContactForm {
       return window.API_CONFIG.API_GATEWAY_URL;
     }
     
-    // Fallback for development
-    return window.API_CONFIG?.FALLBACK_URL || 
-           'https://your-api-gateway-url.execute-api.eu-north-1.amazonaws.com/dev/contact';
   }
 
   getApiKey() {
