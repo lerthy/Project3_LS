@@ -43,3 +43,13 @@ output "rds_security_group_id" {
   description = "Security group ID for RDS access"
   value       = aws_security_group.rds_ingress.id
 }
+
+output "dms_task_id" {
+  description = "DMS replication task identifier"
+  value       = var.environment == "production" && length(aws_dms_replication_task.rds_to_standby) > 0 ? aws_dms_replication_task.rds_to_standby[0].replication_task_id : ""
+}
+
+output "dms_task_arn" {
+  description = "DMS replication task ARN"  
+  value       = var.environment == "production" && length(aws_dms_replication_task.rds_to_standby) > 0 ? aws_dms_replication_task.rds_to_standby[0].replication_task_arn : ""
+}

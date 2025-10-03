@@ -472,11 +472,7 @@ class ContactForm {
     if (window.API_CONFIG &amp;&amp; window.API_CONFIG.API_GATEWAY_URL &amp;&amp; 
         !window.API_CONFIG.API_GATEWAY_URL.includes('{{')) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >      return window.API_CONFIG.API_GATEWAY_URL;</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-    
-    // Fallback for development
-    return window.API_CONFIG?.FALLBACK_URL <span class="branch-0 cbranch-no" title="branch not covered" >|| </span>
-           'https://your-api-gateway-url.execute-api.eu-north-1.amazonaws.com/dev/contact';
+<span class="cstat-no" title="statement not covered" >    }</span> 
   }
 &nbsp;
   async handleSubmit(event) {
