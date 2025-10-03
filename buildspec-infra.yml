@@ -26,8 +26,7 @@ phases:
       - mv terraform /usr/local/bin/
       # Tools used to parse outputs
       - yum -y install jq >/dev/null 2>&1 || true
-      
-      # Install tflint (pinned release to avoid 403 on GitHub raw)
+      - echo "Install tflint (pinned release to avoid 403 on GitHub raw)"
       - |
         set -e
         TFLINT_VERSION=0.50.3
@@ -37,33 +36,28 @@ phases:
         unzip -o tflint_linux_amd64.zip
         mv tflint /usr/local/bin/
         tflint --version
-      
-      # Install Go dependencies for tests
+      - echo "Install Go dependencies for tests"
       - go -C infra mod download
 
   pre_build:
     commands:
       - echo "=== OPERATIONAL EXCELLENCE: Pre-Build Validation ==="
-      
-      # Terraform formatting check
+      - echo "Terraform formatting check"
       - echo "Checking Terraform formatting..."
       - terraform -chdir=infra fmt -recursive
       - terraform -chdir=infra fmt -check -recursive
-      
-      # Terraform validation
+      - echo "Terraform validation"
       - echo "Validating Terraform configuration..."
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
-      
-      # Security scan with tfsec
+      - echo "Security scan with tfsec"
       - echo "Running security scan with tfsec..."
       - |
         wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
         chmod +x tfsec
         ./tfsec infra/ --format json --out tfsec-report.json || echo "Security issues found - review tfsec-report.json"
         ./tfsec infra/ --format lovely || echo "Security scan completed with findings"
-      
-      # Fast TFLint using lightweight config
+      - echo "Fast TFLint using lightweight config"
       - echo "Running Terraform linting..."
       - |
         set -e
@@ -76,8 +70,7 @@ phases:
         EOF
         tflint -c .tflint.ci.hcl
         cd - >/dev/null
-      
-      # Check for drift in existing infrastructure
+      - echo "Check for drift in existing infrastructure"
       - echo "Checking for infrastructure drift..."
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_CREATED" ] && [ "$CODEBUILD_WEBHOOK_EVENT" != "PULL_REQUEST_UPDATED" ]; then
