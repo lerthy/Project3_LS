@@ -100,11 +100,18 @@ phases:
       # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
       - terraform -chdir=infra plan -out=tfplan
       
-      # Terraform apply (only if not a PR)
+      # Phased Terraform apply (only if not a PR)
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
         else
+          echo "=== PHASE 1: Deploy IAM permissions first ==="
+          terraform -chdir=infra apply -target=module.iam -auto-approve || echo "IAM deployment failed; continuing..."
+          
+          echo "Waiting 30 seconds for IAM propagation..."
+          sleep 30
+          
+          echo "=== PHASE 2: Deploy remaining infrastructure ==="
           # Do not fail the build if apply fails; continue so pipeline does not rerun endlessly
           terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
         fi

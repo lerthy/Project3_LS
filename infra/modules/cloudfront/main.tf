@@ -14,11 +14,15 @@ resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
   bucket = aws_s3_bucket.cloudfront_logs.id
 
   rule {
-    object_ownership = "BucketOwnerEnforced"
+    object_ownership = "BucketOwnerPreferred"
   }
 }
 
-# ACL not needed with BucketOwnerEnforced ownership
+resource "aws_s3_bucket_acl" "cloudfront_logs" {
+  bucket = aws_s3_bucket.cloudfront_logs.id
+  acl    = "log-delivery-write"
+  depends_on = [aws_s3_bucket_ownership_controls.cloudfront_logs]
+}
 
 resource "aws_s3_bucket_lifecycle_configuration" "cloudfront_logs_lifecycle" {
   bucket = aws_s3_bucket.cloudfront_logs.id
