@@ -5,7 +5,11 @@ class ContactForm {
   constructor() {
     this.form = document.querySelector('[data-purpose="contact-form"]');
     this.submitButton = this.form?.querySelector('button[type="submit"]');
-    this.apiEndpoint = this.getApiEndpoint();
+    
+    // Wait a moment for config to load, then get endpoint
+    setTimeout(() => {
+      this.apiEndpoint = this.getApiEndpoint();
+    }, 100);
     
     if (this.form) {
       this.init();
@@ -17,13 +21,19 @@ class ContactForm {
   }
 
   getApiEndpoint() {
+    // Debug logging
+    console.log('API_CONFIG object:', window.API_CONFIG);
+    console.log('API_CONFIG exists:', !!window.API_CONFIG);
+    
     // Try to get URL from config, fallback to environment or placeholder
     if (window.API_CONFIG && window.API_CONFIG.API_GATEWAY_URL && 
         !window.API_CONFIG.API_GATEWAY_URL.includes('{{')) {
+      console.log('Using dynamic API URL:', window.API_CONFIG.API_GATEWAY_URL);
       return window.API_CONFIG.API_GATEWAY_URL;
     }
     
     // Fallback for development/testing
+    console.warn('Falling back to placeholder API URL - config not loaded properly!');
     return 'https://api.example.com/contact';
   }
 
@@ -31,10 +41,12 @@ class ContactForm {
     // Try to get API key from config
     if (window.API_CONFIG && window.API_CONFIG.API_KEY && 
         !window.API_CONFIG.API_KEY.includes('{{')) {
+      console.log('Using dynamic API key');
       return window.API_CONFIG.API_KEY;
     }
     
     // Fallback for development
+    console.warn('Using fallback API key - config not loaded properly!');
     return window.API_CONFIG?.FALLBACK_API_KEY || 'development-api-key';
   }
 
@@ -102,7 +114,11 @@ class ContactForm {
   }
 
   async submitForm(data) {
-    const response = await fetch(this.apiEndpoint, {
+    // Get the API endpoint fresh each time
+    const apiEndpoint = this.getApiEndpoint();
+    console.log('About to submit to:', apiEndpoint);
+    
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

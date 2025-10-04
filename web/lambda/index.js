@@ -22,8 +22,10 @@ async function getDbCredentials() {
     
     if (secretArn) {
       // Production: Use Secrets Manager
+      console.log(`Retrieving credentials from Secrets Manager: ${secretArn}`);
       const secretData = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretArn }));
       const secret = JSON.parse(secretData.SecretString || '{}');
+      console.log(`Secrets Manager returned host: ${secret.host}`);
       
       dbCredentials = {
         host: secret.host,
@@ -134,9 +136,12 @@ export const handler = async (event) => {
     }
 
     // Get database credentials from SSM
+    console.log("Getting database credentials...");
     const credentials = await getDbCredentials();
+    console.log("Database credentials retrieved successfully");
 
-    // Connect to database
+    // Connect to database with increased timeout
+    console.log(`Attempting to connect to database at ${credentials.host}`);
     const client = new Client({
       host: credentials.host,
       user: credentials.user,
@@ -144,13 +149,26 @@ export const handler = async (event) => {
       database: credentials.database,
       port: 5432,
       ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000,
-      query_timeout: 5000
+      connectionTimeoutMillis: 10000,  // Increased from 5000 to 10000
+      query_timeout: 10000,           // Increased from 5000 to 10000
+      statement_timeout: 10000        // Added statement timeout
     });
 
-    await client.connect();
+    // Add timeout wrapper for connection
+    const connectWithTimeout = async () => {
+      return Promise.race([
+        client.connect(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+        )
+      ]);
+    };
+
+    await connectWithTimeout();
+    console.log("Database connection established successfully");
 
     // Ensure table exists (create if not exists)
+    console.log("Creating table if not exists...");
     await client.query(`
       CREATE TABLE IF NOT EXISTS contacts (
         id SERIAL PRIMARY KEY,
@@ -165,8 +183,10 @@ export const handler = async (event) => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log("Table ready");
 
     // Insert contact data
+    console.log("Inserting contact data...");
     const query = `
       INSERT INTO contacts
       (name, email, phone, company, job_title, country, city, message)
@@ -186,7 +206,9 @@ export const handler = async (event) => {
     ];
 
     const result = await client.query(query, values);
+    console.log(`Contact inserted successfully with ID: ${result.rows[0].id}`);
     await client.end();
+    console.log("Database connection closed");
 
     return {
       statusCode: 200,
