@@ -6,7 +6,7 @@
 set -e
 
 # Configuration - Using hardcoded bucket name to match buildspec-infra.yml
-BUCKET_NAME="terraform-state-project3-fresh"
+BUCKET_NAME="terraform-state-project3-20251004-lerdisalihi"
 REGION="us-east-1"
 DYNAMODB_TABLE="terraform-state-lock"
 
