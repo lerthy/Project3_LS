@@ -24,6 +24,18 @@ variable "cloudfront_oai_id" {
   type        = string
 }
 
+variable "api_gateway_url" {
+  description = "API Gateway URL for contact form"
+  type        = string
+  default     = ""
+}
+
+variable "api_key" {
+  description = "API Gateway key for contact form"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

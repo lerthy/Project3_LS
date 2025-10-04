@@ -14,16 +14,15 @@ resource "aws_s3_bucket_versioning" "website_versioning" {
   }
 }
 
-# Default encryption for website bucket with customer-managed KMS key
+# Default encryption for website bucket with AES256 (simpler for CloudFront access)
 resource "aws_s3_bucket_server_side_encryption_configuration" "website_encryption" {
   bucket = aws_s3_bucket.website.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.s3_website_encryption.arn
+      sse_algorithm = "AES256"
     }
-    bucket_key_enabled = true  # Cost optimization for KMS
+    bucket_key_enabled = false
   }
 }
 
@@ -172,4 +171,90 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts_lifecycle" {
       days = 90  # Delete old artifacts after 90 days
     }
   }
+}
+
+# Upload website files to S3 bucket
+locals {
+  web_root = "${path.root}/../web/static"
+  
+  website_files = {
+    "index.html"    = "${local.web_root}/index.html"
+    "contact.html"  = "${local.web_root}/contact.html"
+    "style.css"     = "${local.web_root}/style.css"
+  }
+  
+  js_files = {
+    "js/config.js"  = "${local.web_root}/js/config.js"
+    "js/contact.js" = "${local.web_root}/js/contact.js"
+  }
+  
+  # Get all asset files dynamically
+  asset_files = {
+    for file in fileset("${local.web_root}/assets", "**") : 
+    "assets/${file}" => "${local.web_root}/assets/${file}"
+  }
+}
+
+# Helper function to determine MIME type
+locals {
+  mime_types = {
+    ".html" = "text/html"
+    ".css"  = "text/css"
+    ".js"   = "application/javascript"
+    ".ttf"  = "font/ttf"
+    ".woff" = "font/woff"
+    ".woff2" = "font/woff2"
+    ".eot"  = "application/vnd.ms-fontobject"
+    ".svg"  = "image/svg+xml"
+  }
+}
+
+resource "aws_s3_object" "website_files" {
+  for_each = local.website_files
+  
+  bucket       = aws_s3_bucket.website.id
+  key          = each.key
+  source       = each.value
+  content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
+  etag         = filemd5(each.value)
+}
+
+# Generate dynamic config.js with API Gateway configuration
+resource "aws_s3_object" "config_js" {
+  bucket       = aws_s3_bucket.website.id
+  key          = "js/config.js"
+  content_type = "application/javascript"
+  
+  content = templatefile("${path.module}/templates/config.js.tpl", {
+    api_gateway_url = var.api_gateway_url
+    api_key        = var.api_key
+  })
+  
+  etag = md5(templatefile("${path.module}/templates/config.js.tpl", {
+    api_gateway_url = var.api_gateway_url
+    api_key        = var.api_key
+  }))
+}
+
+# Upload other JS files (excluding config.js as it's generated)
+resource "aws_s3_object" "js_files" {
+  for_each = {
+    for k, v in local.js_files : k => v if k != "js/config.js"
+  }
+  
+  bucket       = aws_s3_bucket.website.id
+  key          = each.key
+  source       = each.value
+  content_type = "application/javascript"
+  etag         = filemd5(each.value)
+}
+
+resource "aws_s3_object" "asset_files" {
+  for_each = local.asset_files
+  
+  bucket       = aws_s3_bucket.website.id
+  key          = each.key
+  source       = each.value
+  content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
+  etag         = filemd5(each.value)
 }
