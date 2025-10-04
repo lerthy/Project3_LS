@@ -41,10 +41,10 @@ output "website_kms_key_alias" {
 
 output "artifacts_kms_key_arn" {
   description = "ARN of the KMS key used for artifacts bucket encryption"
-  value       = aws_kms_key.s3_artifacts_encryption.arn
+  value       = aws_kms_key.s3_codepipeline_encryption.arn
 }
 
 output "artifacts_kms_key_alias" {
   description = "Alias of the KMS key used for artifacts bucket encryption"
-  value       = aws_kms_alias.s3_artifacts_encryption.name
+  value       = aws_kms_alias.s3_codepipeline_encryption.name
 }

@@ -3,6 +3,9 @@
 # ============================================================================
 # Customer-managed KMS keys for enhanced S3 security
 
+# Data source to get current caller identity for account ID
+data "aws_caller_identity" "current" {}
+
 # KMS Key for S3 Website Bucket Encryption
 resource "aws_kms_key" "s3_website_encryption" {
   description = "KMS key for S3 website bucket encryption"
@@ -18,6 +21,21 @@ resource "aws_kms_key" "s3_website_encryption" {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow account principals with IAM permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
         Resource = "*"
       },
       {
@@ -43,30 +61,6 @@ resource "aws_kms_key" "s3_website_encryption" {
         }
         Action = [
           "kms:Decrypt",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow CloudFront OAI"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${var.cloudfront_oai_id}"
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow CodeBuild Service"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
-        }
-        Action = [
-          "kms:Decrypt",
           "kms:DescribeKey",
           "kms:Encrypt",
           "kms:GenerateDataKey*",
@@ -76,23 +70,30 @@ resource "aws_kms_key" "s3_website_encryption" {
       }
     ]
   })
-  
-  tags = merge(var.tags, {
-    Name = "s3-website-encryption-key"
-    Type = "s3-encryption"
-  })
+
+  # Enable key rotation for security
+  enable_key_rotation = true
+
+  # Tags for resource management
+  tags = {
+    Name = "project3-s3-website-kms-key"
+    Environment = "dev"
+    Project = "project3"
+    CreatedBy = "terraform"
+  }
 }
 
+# Alias for the KMS key for better readability
 resource "aws_kms_alias" "s3_website_encryption" {
-  name          = "alias/s3-website-encryption"
+  name          = "alias/project3-s3-website-dev"
   target_key_id = aws_kms_key.s3_website_encryption.key_id
 }
 
-# KMS Key for S3 CodePipeline Artifacts Encryption
-resource "aws_kms_key" "s3_artifacts_encryption" {
-  description = "KMS key for S3 CodePipeline artifacts encryption"
+# KMS Key for S3 CodePipeline Bucket Encryption
+resource "aws_kms_key" "s3_codepipeline_encryption" {
+  description = "KMS key for S3 CodePipeline bucket encryption"
   
-  # Key policy allowing root account, S3, and CodePipeline services
+  # Key policy allowing root account and CodePipeline/S3 service access
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -103,6 +104,21 @@ resource "aws_kms_key" "s3_artifacts_encryption" {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow account principals with IAM permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
         Resource = "*"
       },
       {
@@ -121,13 +137,10 @@ resource "aws_kms_key" "s3_artifacts_encryption" {
         Resource = "*"
       },
       {
-        Sid    = "Allow CodePipeline Service"
+        Sid    = "Allow CloudFront Service"
         Effect = "Allow"
         Principal = {
-          Service = [
-            "codepipeline.amazonaws.com",
-            "codebuild.amazonaws.com"
-          ]
+          Service = "cloudfront.amazonaws.com"
         }
         Action = [
           "kms:Decrypt",
@@ -139,10 +152,25 @@ resource "aws_kms_key" "s3_artifacts_encryption" {
         Resource = "*"
       },
       {
-        Sid    = "Allow CodeBuild Role"
+        Sid    = "Allow CodePipeline Service"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
+          Service = "codepipeline.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CodeBuild Service"
+        Effect = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
         }
         Action = [
           "kms:Decrypt",
@@ -155,17 +183,21 @@ resource "aws_kms_key" "s3_artifacts_encryption" {
       }
     ]
   })
-  
-  tags = merge(var.tags, {
-    Name = "s3-artifacts-encryption-key"
-    Type = "s3-encryption"
-  })
+
+  # Enable key rotation for security
+  enable_key_rotation = true
+
+  # Tags for resource management
+  tags = {
+    Name = "project3-s3-codepipeline-kms-key"
+    Environment = "dev"
+    Project = "project3"
+    CreatedBy = "terraform"
+  }
 }
 
-resource "aws_kms_alias" "s3_artifacts_encryption" {
-  name          = "alias/s3-artifacts-encryption"
-  target_key_id = aws_kms_key.s3_artifacts_encryption.key_id
+# Alias for the CodePipeline KMS key
+resource "aws_kms_alias" "s3_codepipeline_encryption" {
+  name          = "alias/project3-s3-codepipeline-dev"
+  target_key_id = aws_kms_key.s3_codepipeline_encryption.key_id
 }
-
-# Get current AWS account ID
-data "aws_caller_identity" "current" {}
