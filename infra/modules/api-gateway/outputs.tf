@@ -23,3 +23,9 @@ output "api_key_value" {
   value       = aws_api_gateway_api_key.contact_api_key.value
   sensitive   = true
 }
+
+output "api_key" {
+  description = "API Gateway API Key Value (alias for compatibility)"
+  value       = aws_api_gateway_api_key.contact_api_key.value
+  sensitive   = true
+}

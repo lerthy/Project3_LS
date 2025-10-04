@@ -81,6 +81,47 @@ resource "aws_api_gateway_integration_response" "options_integration_response" {
   }
 }
 
+# Method response for POST method (required for CORS)
+resource "aws_api_gateway_method_response" "post_contact_200" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.post_contact.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# Method response for POST method errors
+resource "aws_api_gateway_method_response" "post_contact_400" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.post_contact.http_method
+  status_code = "400"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "post_contact_500" {
+  rest_api_id = aws_api_gateway_rest_api.contact_api.id
+  resource_id = aws_api_gateway_resource.contact_resource.id
+  http_method = aws_api_gateway_method.post_contact.http_method
+  status_code = "500"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
 # API Key for authentication
 resource "aws_api_gateway_api_key" "contact_api_key" {
   name        = "contact-form-api-key"
@@ -141,7 +182,10 @@ resource "aws_api_gateway_deployment" "contact_deployment" {
   depends_on = [
     aws_api_gateway_integration.lambda_integration,
     aws_api_gateway_integration.lambda_integration_options,
-    aws_api_gateway_integration_response.options_integration_response
+    aws_api_gateway_integration_response.options_integration_response,
+    aws_api_gateway_method_response.post_contact_200,
+    aws_api_gateway_method_response.post_contact_400,
+    aws_api_gateway_method_response.post_contact_500
   ]
 
   # Force a new deployment when integrations/methods change
