@@ -136,4 +136,4 @@ artifacts:
 cache:
   paths:
     - 'web/node_modules/**/*'
-    - 'web/lambda/node_modules/**/*'
+    - 'web/lambda/node_modules/**/*'# YAML fix applied 1759595518
