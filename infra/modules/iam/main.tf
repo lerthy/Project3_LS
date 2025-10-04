@@ -123,16 +123,16 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           # RDS permissions
           "rds:*",
           
-          # KMS permissions
+          # KMS permissions - explicit permissions to override restrictive key policies
           "kms:*",
           
           # WAF permissions
           "wafv2:*",
           
-          # SNS permissions
+          # SNS permissions - explicit permissions for existing resources
           "sns:*",
           
-          # SQS permissions  
+          # SQS permissions - explicit permissions for existing resources
           "sqs:*",
           
           # Additional CloudWatch permissions
@@ -148,6 +148,46 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "dms:*"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # Explicit KMS permissions for existing keys
+          "kms:DescribeKey",
+          "kms:GetKeyPolicy",
+          "kms:ListKeys", 
+          "kms:ListAliases",
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
+        Resource = [
+          "arn:aws:kms:eu-north-1:264765155009:key/*",
+          "arn:aws:kms:us-west-2:264765155009:key/*"
+        ]
+      },
+      {
+        Effect = "Allow" 
+        Action = [
+          # Explicit SNS permissions for existing topics
+          "sns:ListTagsForResource",
+          "sns:GetTopicAttributes"
+        ]
+        Resource = [
+          "arn:aws:sns:*:264765155009:*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # Explicit SQS permissions for existing queues
+          "sqs:GetQueueAttributes",
+          "sqs:ListQueueTags"
+        ]
+        Resource = [
+          "arn:aws:sqs:*:264765155009:*"
+        ]
       }
     ]
   })
