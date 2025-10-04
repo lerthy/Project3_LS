@@ -13,7 +13,7 @@
 ---
 
 ## Baseline
-- Tools: AWS (S3, CloudFront, API Gateway, Lambda, RDS, CloudWatch), CodePipeline, CodeBuild, SSM Parameter Store, Terraform, Go (tests), Node.js 18 (web, lambda), ESLint, Stylelint, Vitest.
+- Tools: AWS (S3, CloudFront, API Gateway, Lambda, RDS, CloudWatch), CodePipeline, CodeBuild, SSM Parameter Store, Terraform, Node.js 18 (web, lambda), ESLint, Stylelint, Vitest.
 - Repositories/Monorepo: Single repo with `infra/` (Terraform), `cicd/` (pipelines), and `web/` (static site + lambda).
 - Environments (dev/stage/prod): Single "development" environment tags; pipelines branch-driven (`develop`).
 - Cloud provider/region(s): AWS `us-east-1` (set in buildspecs and Terraform backend).

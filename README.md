@@ -9,7 +9,6 @@ Both pipelines enforce linting and unit test coverage thresholds.////
 ```
 infra/                # Terraform for S3, CloudFront, API Gateway, Lambda, RDS
   *.tf
-  tests/              # Terratest integration test (go)
 web/
   static/             # index.html, contact.html, css, images, js
   lambda/             # Lambda function (Node.js + Jest tests)
@@ -24,7 +23,7 @@ web/buildspec-web.yml # CodeBuild spec for Web pipeline
 
 - AWS account with permissions to use: S3, CloudFront, API Gateway, Lambda, RDS, SSM Parameter Store, IAM
 - CodeBuild/CodePipeline (or GitHub Actions) environment variables configured as noted below
-- Node.js 18+, Go 1.21+, Terraform 1.6+
+- Node.js 18+, Terraform 1.6+
 
 ### Secrets and Parameters (Security)
 
@@ -75,8 +74,8 @@ Trigger: push to `develop` branch (configure your CI to watch this branch).
 
 1) Infrastructure Pipeline (`buildspec-infra.yml`):
 - Installs Terraform and tflint
-- Runs: `terraform fmt -check`, `terraform validate`, `tflint`
-- Runs Terratest with coverage (min 60%)
+- Runs: `terraform fmt -check`, `terraform validate`, `tflint`, security scan
+- Validates backend prerequisites with validate-backend.sh
 - Packages Lambda from `web/lambda` into `infra/lambda.zip`
 - Runs `terraform plan` and (for non-PR events) `terraform apply`
 
@@ -135,7 +134,7 @@ terraform plan -var "db_password=TestPassw0rd!"
 
 - Frontend (Vitest) thresholds: 70% global (branches, functions, lines, statements)
 - Lambda (Jest) thresholds: 70% global
-- Terraform (Terratest) coverage: ≥60%
+- Infrastructure: Terraform validation and security scanning
 
 ### Demo Steps Checklist
 
