@@ -36,13 +36,18 @@ variable "db_password" {
 variable "aws_region" {
   description = "AWS region to deploy resources into"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-north-1"
+
+  validation {
+    condition     = var.aws_region == "eu-north-1"
+    error_message = "project4 branch is locked to eu-north-1. Override only if you intentionally migrate regions."
+  }
 }
 
 variable "primary_availability_zones" {
   description = "List of availability zones in the primary region"
   type        = list(string)
-  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  default     = ["eu-north-1a", "eu-north-1b", "eu-north-1c"]
 }
 
 variable "standby_availability_zones" {

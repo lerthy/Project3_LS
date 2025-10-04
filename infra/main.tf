@@ -50,6 +50,7 @@ module "standby_vpc" {
 module "s3" {
   source = "./modules/s3"
 
+  # Needed because the s3 module's replication.tf uses provider aws.standby for standby bucket creation
   providers = {
     aws.standby = aws.standby
   }
@@ -57,7 +58,9 @@ module "s3" {
   website_bucket_name   = "my-website-bucket-project3-eunorth1-fresh"
   artifacts_bucket_name = "codepipeline-artifacts-project3-eunorth1-fresh"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
-  enable_replication    = var.environment == "production" ? true : false  # Enable for production
+  api_gateway_url       = module.api_gateway.api_gateway_url
+  api_key               = module.api_gateway.api_key
+  enable_replication    = var.environment == "production" ? true : false
   replication_role_arn  = var.environment == "production" ? var.replication_role_arn : ""
   tags                  = local.common_tags
 }
