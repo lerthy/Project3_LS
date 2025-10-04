@@ -17,9 +17,7 @@ env:
 phases:
   install:
     commands:
-      # Removed erroneous region override (was forcing us-east-1 and breaking eu-north-1 resources)
       - echo "Honoring configured region: AWS_REGION=$AWS_REGION AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION TF_VAR_aws_region=$TF_VAR_aws_region"
-      # Install Terraform
       - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
       - mv terraform /usr/local/bin/
