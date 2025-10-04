@@ -46,9 +46,7 @@ phases:
 
   build:
     commands:
-      - echo "=== OPERATIONAL EXCELLENCE: Testing and Quality Assurance ==="
-      
-      # Frontend tests with comprehensive coverage
+      - echo "=== OPERATIONAL EXCELLENCE: Testing and Quality Assurance ==="      # Frontend tests with comprehensive coverage
       - echo "Running frontend tests with coverage reporting..."
       - npm --prefix web run test
       
@@ -90,9 +88,7 @@ phases:
 
   post_build:
     commands:
-      - echo "Fetching Terraform outputs from SSM and deploying..."
-
-      # Fetch SSM parameters from module-specific parameters
+      - echo "Fetching Terraform outputs from SSM and deploying..."      # Fetch SSM parameters from module-specific parameters
       - |
         set -e
         echo "AWS region: ${AWS_REGION:-unset}"
