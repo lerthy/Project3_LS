@@ -58,6 +58,21 @@ resource "aws_kms_key" "s3_website_encryption" {
           "kms:DescribeKey"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "Allow CodeBuild Service"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -113,6 +128,21 @@ resource "aws_kms_key" "s3_artifacts_encryption" {
             "codepipeline.amazonaws.com",
             "codebuild.amazonaws.com"
           ]
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CodeBuild Role"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
         }
         Action = [
           "kms:Decrypt",
