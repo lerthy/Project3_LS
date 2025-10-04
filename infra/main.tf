@@ -263,7 +263,7 @@ module "operational_excellence" {
   api_gateway_name        = "contact-api"
   
   # Terraform state configuration for drift detection
-  terraform_state_bucket  = "project3-terraform-state-1757872273"
+  terraform_state_bucket  = "terraform-state-project3-fresh"
   terraform_state_key     = "project3/terraform.tfstate"
   
   tags = local.common_tags

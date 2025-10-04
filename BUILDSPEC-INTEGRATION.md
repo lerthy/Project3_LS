@@ -26,7 +26,7 @@ The buildspec already has the required environment variables:
 ```yaml
 env:
   variables:
-    TF_STATE_BUCKET: "project3-terraform-state-1757872273"
+    TF_STATE_BUCKET: "terraform-state-project3-fresh"
     TF_STATE_KEY: "project3/terraform.tfstate"
     TF_STATE_REGION: "us-east-1"
     TF_STATE_TABLE: "terraform-state-lock"
@@ -55,7 +55,7 @@ If validation passes:
 
 Local test successful:
 ```bash
-export TF_STATE_BUCKET="project3-terraform-state-1757872273"
+export TF_STATE_BUCKET="terraform-state-project3-fresh"
 export TF_STATE_REGION="us-east-1" 
 export TF_STATE_TABLE="terraform-state-lock"
 ./validate-backend.sh

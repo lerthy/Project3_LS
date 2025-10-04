@@ -36,13 +36,13 @@ variable "db_password" {
 variable "aws_region" {
   description = "AWS region to deploy resources into"
   type        = string
-  default     = "eu-north-1"
+  default     = "us-east-1"
 }
 
 variable "primary_availability_zones" {
   description = "List of availability zones in the primary region"
   type        = list(string)
-  default     = ["eu-north-1a", "eu-north-1b", "eu-north-1c"]
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
 }
 
 variable "standby_availability_zones" {
