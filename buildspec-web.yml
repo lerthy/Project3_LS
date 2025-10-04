@@ -21,7 +21,9 @@ phases:
 
   pre_build:
     commands:
-      - echo "=== OPERATIONAL EXCELLENCE: Pre-Build Quality Gates ==="      # Security scanning for frontend dependencies
+      - echo "=== OPERATIONAL EXCELLENCE: Pre-Build Quality Gates ==="
+      
+      # Security scanning for frontend dependencies
       - echo "Running security vulnerability scan..."
       - npm --prefix web audit --audit-level high || echo "Frontend security audit completed with warnings"
       - npm --prefix web/lambda audit --audit-level high || echo "Lambda security audit completed with warnings"
