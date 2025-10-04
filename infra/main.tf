@@ -4,6 +4,17 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# Import existing resources to prevent conflicts
+import {
+  to = aws_secretsmanager_secret.db_credentials_standby
+  id = "project3/db-credentials-standby"
+}
+
+import {
+  to = module.lambda_standby.aws_cloudwatch_log_group.lambda
+  id = "/aws/lambda/contact-form-standby"
+}
+
 
 
 # S3 Module

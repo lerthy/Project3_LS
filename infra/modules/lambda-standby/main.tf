@@ -59,14 +59,9 @@ resource "aws_cloudwatch_log_group" "lambda" {
   tags = var.tags
 
   lifecycle {
-    ignore_changes = [name, retention_in_days]
+    ignore_changes = [name, retention_in_days, tags]
+    prevent_destroy = true
   }
-}
-
-# Import the existing log group if it exists
-import {
-  to = aws_cloudwatch_log_group.lambda
-  id = "/aws/lambda/contact-form-standby"
 }
 
 # CloudWatch Alarms

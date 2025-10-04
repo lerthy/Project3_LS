@@ -49,13 +49,8 @@ resource "aws_secretsmanager_secret" "db_credentials_standby" {
 
   lifecycle {
     ignore_changes = [name, description, tags]
+    prevent_destroy = true
   }
-}
-
-# Import the existing secret
-import {
-  to = aws_secretsmanager_secret.db_credentials_standby
-  id = "project3/db-credentials-standby"
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
