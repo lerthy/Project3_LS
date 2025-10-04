@@ -5,32 +5,26 @@ env:
     AWS_DEFAULT_REGION: eu-north-1
     AWS_REGION: eu-north-1
     TF_VAR_aws_region: eu-north-1
-    # Backend configuration (set these in CodeBuild environment variables)
     TF_STATE_BUCKET: "terraform-state-project3-eunorth1-20251004-lerdisalihi"
     TF_STATE_KEY: "project3/terraform.tfstate"
     TF_STATE_REGION: "eu-north-1"
     TF_STATE_TABLE: "terraform-state-lock"
-    # Operational Excellence variables
     TF_VAR_notification_email: "lerdi890@gmail.com"
     TF_VAR_approval_email: "lerdi890@gmail.com"
 
 phases:
   install:
     commands:
-      - echo "Honoring configured region: AWS_REGION=$AWS_REGION AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION TF_VAR_aws_region=$TF_VAR_aws_region"
+      - echo "Honoring configured region - AWS_REGION=$AWS_REGION"
       - wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
       - unzip terraform_1.6.0_linux_amd64.zip
       - mv terraform /usr/local/bin/
-      # Tools used to parse outputs
       - yum -y install jq >/dev/null 2>&1 || true
-      
-      # Install tflint (pinned release to avoid 403 on GitHub raw)
       - |
         set -e
         TFLINT_VERSION=0.50.3
         echo "Installing tflint v$TFLINT_VERSION..."
-        wget -q https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip || \
-        (echo "Retrying tflint download..." && sleep 2 && wget -q https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip)
+        wget -q https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip
         unzip -o tflint_linux_amd64.zip
         mv tflint /usr/local/bin/
         tflint --version
@@ -39,26 +33,20 @@ phases:
     commands:
       - echo "=== OPERATIONAL EXCELLENCE Pre-Build Validation ==="
       - echo "Terraform formatting check"
-      - echo "Checking Terraform formatting..."
       - terraform -chdir=infra fmt -recursive
       - terraform -chdir=infra fmt -check -recursive
       - echo "Create Lambda ZIP files for validation"
-      - echo "Creating disaster recovery Lambda ZIP..."
       - (cd infra/modules/disaster-recovery && zip -r disaster_recovery.zip disaster_recovery.py || echo "disaster_recovery.py not found, creating empty zip" && touch empty.txt && zip disaster_recovery.zip empty.txt)
-      - echo "Creating RPO enhancement Lambda ZIP..."
       - (cd infra/modules/rpo-enhancement && zip -r hourly_backup.zip hourly_backup.py || echo "hourly_backup.py not found, creating empty zip" && touch empty.txt && zip hourly_backup.zip empty.txt)
       - echo "Terraform validation"
-      - echo "Validating Terraform configuration..."
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
       - echo "Security scan with tfsec"
-      - echo "Running security scan with tfsec..."
       - wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
       - chmod +x tfsec
       - ./tfsec infra/ --format json --out tfsec-report.json || echo "Security issues found"
       - ./tfsec infra/ --format lovely || echo "Security scan completed"
       - echo "Fast TFLint using lightweight config"
-      - echo "Running TFLint..."
       - tflint -c .tflint.ci.hcl infra/ || echo "TFLint completed with findings"
 
   build:
@@ -72,13 +60,9 @@ phases:
       - echo "=== OPERATIONAL EXCELLENCE Post-Deployment Validation ==="
       - echo "Create Lambda deployment package"
       - (cd web/lambda && zip -r ../../infra/lambda.zip .)
-      
-      # Validate Terraform backend prerequisites
       - echo "Validating Terraform backend prerequisites..."
       - chmod +x validate-backend.sh
       - ./validate-backend.sh
-      
-      # Terraform init with backend
       - |
         if [ -n "$TF_STATE_BUCKET" ] && [ -n "$TF_STATE_KEY" ] && [ -n "$TF_STATE_REGION" ] && [ -n "$TF_STATE_TABLE" ]; then
           echo "Initializing Terraform with S3 backend..."
@@ -92,26 +76,17 @@ phases:
           echo "No backend configuration provided, using local state..."
           terraform -chdir=infra init
         fi
-      
-      # Clean state validation (optional)
       - echo "Validating Terraform state consistency..."
-      
-      # Terraform plan (full plan to ensure API methods/CORS are deployed correctly)
       - terraform -chdir=infra plan -out=tfplan
-      
-      # Phased Terraform apply (only if not a PR)
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
         else
           echo "=== PHASE 1: Deploy IAM permissions first ==="
           terraform -chdir=infra apply -target=module.iam -auto-approve || echo "IAM deployment failed; continuing..."
-          
           echo "Waiting 30 seconds for IAM propagation..."
           sleep 30
-          
           echo "=== PHASE 2: Deploy remaining infrastructure ==="
-          # Do not fail the build if apply fails; continue so pipeline does not rerun endlessly
           terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
         fi
       - echo "Infrastructure deployment completed successfully"
