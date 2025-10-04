@@ -43,8 +43,8 @@ module "s3" {
     aws.standby = aws.standby
   }
 
-  website_bucket_name   = "my-website-bucket-project3-fresh"
-  artifacts_bucket_name = "codepipeline-artifacts-project3-fresh"
+  website_bucket_name   = "my-website-bucket-project3-eunorth1-fresh"
+  artifacts_bucket_name = "codepipeline-artifacts-project3-eunorth1-fresh"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
   enable_replication    = var.environment == "production" ? true : false  # Enable for production
   replication_role_arn  = var.environment == "production" ? var.replication_role_arn : ""

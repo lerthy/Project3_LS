@@ -46,6 +46,10 @@ resource "aws_secretsmanager_secret" "db_credentials_standby" {
     Type   = "database-credentials"
     Region = "standby"
   })
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {

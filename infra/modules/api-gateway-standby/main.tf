@@ -97,7 +97,7 @@ resource "aws_api_gateway_stage" "api" {
 resource "aws_cloudwatch_log_group" "api" {
   provider = aws.standby
   
-  name              = "/aws/apigateway/${var.environment}-contact-api"
+  name              = "/aws/apigateway/${var.environment}-contact-api-standby"
   retention_in_days = 14
 
   tags = var.tags

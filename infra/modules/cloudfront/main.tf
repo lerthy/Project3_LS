@@ -41,7 +41,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudfront_logs_lifecycle" {
 
 # Performance-optimized response headers policy
 resource "aws_cloudfront_response_headers_policy" "optimized" {
-  name = "performance-optimized-policy"
+  name = "performance-optimized-policy-project3"
 
   custom_headers_config {
     items {

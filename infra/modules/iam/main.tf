@@ -100,6 +100,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
+          # Existing permissions
           "logs:*",
           "s3:*",
           "lambda:*",
@@ -107,18 +108,44 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ssm:*",
           "apigateway:*",
           "cloudwatch:*",
-          "ec2:Describe*",
-          "ec2:CreateNetworkInterface",
-          "ec2:DeleteNetworkInterface",
-          "iam:GetRole*",
-          "iam:PassRole",
           "dynamodb:*",
           "codebuild:*",
           "codepipeline:*",
           "sts:*",
           "secretsmanager:*",
-          "rds:Describe*",
-          "rds:Connect"
+          
+          # EC2 permissions (for VPC, Security Groups, etc.)
+          "ec2:*",
+          
+          # IAM permissions (for creating roles)
+          "iam:*",
+          
+          # RDS permissions
+          "rds:*",
+          
+          # KMS permissions
+          "kms:*",
+          
+          # WAF permissions
+          "wafv2:*",
+          
+          # SNS permissions
+          "sns:*",
+          
+          # SQS permissions  
+          "sqs:*",
+          
+          # Additional CloudWatch permissions
+          "cloudwatch:*",
+          
+          # Route53 permissions
+          "route53:*",
+          
+          # Application Auto Scaling permissions
+          "application-autoscaling:*",
+          
+          # DMS permissions
+          "dms:*"
         ]
         Resource = "*"
       }

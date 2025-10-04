@@ -23,9 +23,10 @@ resource "aws_ssm_parameter" "cloudfront_arn" {
 }
 
 resource "aws_ssm_parameter" "origin_access_identity_id" {
-  name  = "/cloudfront/origin_access_identity_id"
-  type  = "String"
-  value = aws_cloudfront_origin_access_identity.website.id
+  name      = "/cloudfront/origin_access_identity_id"
+  type      = "String"
+  value     = aws_cloudfront_origin_access_identity.website.id
+  overwrite = true
 
   tags = var.tags
 }
