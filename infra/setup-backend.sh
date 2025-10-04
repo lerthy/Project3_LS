@@ -6,8 +6,8 @@
 set -e
 
 # Configuration - Using hardcoded bucket name to match buildspec-infra.yml
-BUCKET_NAME="terraform-state-project3-20251004-lerdisalihi"
-REGION="us-east-1"
+BUCKET_NAME="terraform-state-project3-eunorth1-20251004-lerdisalihi"
+REGION="eu-north-1"
 DYNAMODB_TABLE="terraform-state-lock"
 
 echo "Setting up Terraform backend infrastructure..."

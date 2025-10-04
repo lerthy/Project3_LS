@@ -7,13 +7,20 @@
 # Primary Region Database Credentials
 # ============================================================================
 
-# Use data source to reference existing secret
-data "aws_secretsmanager_secret" "db_credentials" {
-  name = "project3/db-credentials"
+# Create secret for database credentials
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name        = "project3/db-credentials"
+  description = "Database credentials for contact form primary region"
+
+  tags = merge(local.common_tags, {
+    Name   = "project3-db-credentials"
+    Type   = "database-credentials"
+    Region = "primary"
+  })
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_version" {
-  secret_id = data.aws_secretsmanager_secret.db_credentials.id
+  secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = var.db_username
     password = var.db_password

@@ -106,7 +106,7 @@ module "lambda" {
   lambda_zip_path   = "lambda.zip"
   lambda_role_name  = "lambda_exec_role_project3"
   aws_region        = var.aws_region
-  db_secret_arn     = data.aws_secretsmanager_secret.db_credentials.arn
+  db_secret_arn     = aws_secretsmanager_secret.db_credentials.arn
   private_subnet_ids = data.aws_subnets.default_vpc_subnets.ids
   tags              = local.common_tags
 }

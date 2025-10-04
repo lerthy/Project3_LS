@@ -2,13 +2,13 @@ version: 0.2
 
 env:
   variables:
-    AWS_DEFAULT_REGION: us-east-1
-    AWS_REGION: us-east-1
-    TF_VAR_aws_region: us-east-1
+    AWS_DEFAULT_REGION: eu-north-1
+    AWS_REGION: eu-north-1
+    TF_VAR_aws_region: eu-north-1
     # Backend configuration (set these in CodeBuild environment variables)
-    TF_STATE_BUCKET: "terraform-state-project3-20251004-lerdisalihi"
+    TF_STATE_BUCKET: "terraform-state-project3-eunorth1-20251004-lerdisalihi"
     TF_STATE_KEY: "project3/terraform.tfstate"
-    TF_STATE_REGION: "us-east-1"
+    TF_STATE_REGION: "eu-north-1"
     TF_STATE_TABLE: "terraform-state-lock"
     # Operational Excellence variables
     TF_VAR_notification_email: "lerdi890@gmail.com"

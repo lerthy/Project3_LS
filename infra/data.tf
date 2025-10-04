@@ -1,8 +1,5 @@
 # Data source to fetch database credentials from Secrets Manager
-data "aws_secretsmanager_secret_version" "db_creds" {
-  secret_id = "project3/db-credentials"
-}
-
+# Reference the secret version created in secrets.tf
 locals {
-  db_creds = jsondecode(data.aws_secretsmanager_secret_version.db_creds.secret_string)
+  db_creds = jsondecode(aws_secretsmanager_secret_version.db_credentials_version.secret_string)
 }
