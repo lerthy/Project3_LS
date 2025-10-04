@@ -49,7 +49,18 @@ phases:
   post_build:
     commands:
       - echo "Fetching Terraform outputs from SSM and deploying..."
-      - bash -c "set -e && echo 'AWS region: ${AWS_REGION:-unset}' && echo 'Fetching SSM parameters from module-specific stores...' && BUCKET_NAME=$(aws ssm get-parameter --name '/s3/website_bucket_name' --query 'Parameter.Value' --output text) && CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name '/cloudfront/cloudfront_distribution_id' --query 'Parameter.Value' --output text) && API_GATEWAY_URL=$(aws ssm get-parameter --name '/api-gateway/api_gateway_url' --query 'Parameter.Value' --output text) && API_KEY=$(aws ssm get-parameter --name '/api-gateway/api_key' --with-decryption --query 'Parameter.Value' --output text) && LAMBDA_FUNCTION_NAME=$(aws ssm get-parameter --name '/lambda/lambda_function_name' --query 'Parameter.Value' --output text) && export S3_BUCKET=$BUCKET_NAME && echo 'Resolved: S3_BUCKET='$S3_BUCKET', CLOUDFRONT_DISTRIBUTION_ID='$CLOUDFRONT_DISTRIBUTION_ID', API_GATEWAY_URL='$API_GATEWAY_URL', LAMBDA_FUNCTION_NAME='$LAMBDA_FUNCTION_NAME && echo 'API key retrieved successfully'"
+      - |
+        set -e
+        echo "AWS region: ${AWS_REGION:-unset}"
+        echo "Fetching SSM parameters from module-specific stores..."
+        BUCKET_NAME=$(aws ssm get-parameter --name "/s3/website_bucket_name" --query 'Parameter.Value' --output text)
+        CLOUDFRONT_DISTRIBUTION_ID=$(aws ssm get-parameter --name "/cloudfront/cloudfront_distribution_id" --query 'Parameter.Value' --output text)
+        API_GATEWAY_URL=$(aws ssm get-parameter --name "/api-gateway/api_gateway_url" --query 'Parameter.Value' --output text)
+        API_KEY=$(aws ssm get-parameter --name "/api-gateway/api_key" --with-decryption --query 'Parameter.Value' --output text)
+        LAMBDA_FUNCTION_NAME=$(aws ssm get-parameter --name "/lambda/lambda_function_name" --query 'Parameter.Value' --output text)
+        export S3_BUCKET="$BUCKET_NAME"
+        echo "Resolved from module SSM parameters: S3_BUCKET=$S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID, API_GATEWAY_URL=$API_GATEWAY_URL, LAMBDA_FUNCTION_NAME=$LAMBDA_FUNCTION_NAME"
+        echo "API key retrieved successfully"
       - sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
       - sed -i "s|{{API_KEY}}|$API_KEY|g" web/static/js/config.js
       - aws s3 cp web/static/ s3://$S3_BUCKET --recursive
@@ -65,11 +76,36 @@ phases:
       - cd ../..
       - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
       - echo "=== OPERATIONAL EXCELLENCE: Post-Deployment Health Checks ==="
-      - bash -c "echo 'Testing API Gateway endpoint health...' && sleep 30 && curl -f -s '$API_GATEWAY_URL' > /dev/null && echo '✅ API Gateway is healthy' || echo '⚠️ API Gateway health check failed'"
-      - bash -c "echo 'Testing Lambda function health...' && aws lambda invoke --function-name '$LAMBDA_FUNCTION_NAME' --payload '{\"test\": true}' response.json --region '$AWS_DEFAULT_REGION' && echo '✅ Lambda function is healthy' || echo '⚠️ Lambda function health check failed'; rm -f response.json"
-      - bash -c "echo 'Testing CloudFront distribution...' && CLOUDFRONT_URL='https://$(aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.DomainName' --output text --region '$AWS_DEFAULT_REGION')' && curl -f -s $CLOUDFRONT_URL > /dev/null && echo '✅ CloudFront distribution is healthy' || echo '⚠️ CloudFront health check failed'"
-      - bash -c "echo 'Generating deployment health report...' && echo '=== WEB DEPLOYMENT HEALTH REPORT ===' > deployment-health.txt && echo 'Environment: $TF_VAR_environment' >> deployment-health.txt && echo 'Timestamp: $(date)' >> deployment-health.txt && echo 'S3 Bucket: $S3_BUCKET' >> deployment-health.txt && echo 'CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID' >> deployment-health.txt && echo 'API Gateway URL: $API_GATEWAY_URL' >> deployment-health.txt && echo 'Lambda Function: $LAMBDA_FUNCTION_NAME' >> deployment-health.txt && aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.Status' --output text --region '$AWS_DEFAULT_REGION' >> deployment-health.txt || echo 'Status check completed' >> deployment-health.txt"
-      - bash -c "echo 'Sending deployment success notification...' && if [ ! -z '$TF_VAR_notification_email' ]; then aws sns publish --topic-arn 'arn:aws:sns:us-east-1:$(aws sts get-caller-identity --query Account --output text):deployment-notifications-$TF_VAR_environment' --subject '✅ Web Application Deployment Successful - $TF_VAR_environment' --message 'Web application deployment completed successfully for environment: $TF_VAR_environment. All health checks passed. API URL: $API_GATEWAY_URL' --region us-east-1 || echo 'Notification attempted'; fi"
+      - |
+        echo "Testing API Gateway endpoint health..."
+        sleep 30
+        curl -f -s "$API_GATEWAY_URL" > /dev/null && echo "✅ API Gateway is healthy" || echo "⚠️ API Gateway health check failed"
+      - |
+        echo "Testing Lambda function health..."
+        aws lambda invoke --function-name "$LAMBDA_FUNCTION_NAME" --payload '{"test": true}' response.json --region "$AWS_DEFAULT_REGION" && echo "✅ Lambda function is healthy" || echo "⚠️ Lambda function health check failed"
+        rm -f response.json
+      - |
+        echo "Testing CloudFront distribution..."
+        CLOUDFRONT_URL="https://$(aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.DomainName' --output text --region "$AWS_DEFAULT_REGION")"
+        curl -f -s "$CLOUDFRONT_URL" > /dev/null && echo "✅ CloudFront distribution is healthy" || echo "⚠️ CloudFront health check failed"
+      - |
+        echo "Generating deployment health report..."
+        echo "=== WEB DEPLOYMENT HEALTH REPORT ===" > deployment-health.txt
+        echo "Environment: $TF_VAR_environment" >> deployment-health.txt
+        echo "Timestamp: $(date)" >> deployment-health.txt
+        echo "S3 Bucket: $S3_BUCKET" >> deployment-health.txt
+        echo "CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID" >> deployment-health.txt
+        echo "API Gateway URL: $API_GATEWAY_URL" >> deployment-health.txt
+        echo "Lambda Function: $LAMBDA_FUNCTION_NAME" >> deployment-health.txt
+        aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.Status' --output text --region "$AWS_DEFAULT_REGION" >> deployment-health.txt || echo "Status check completed" >> deployment-health.txt
+      - |
+        echo "Sending deployment success notification..."
+        if [ ! -z "$TF_VAR_notification_email" ]; then
+          aws sns publish --topic-arn "arn:aws:sns:us-east-1:$(aws sts get-caller-identity --query Account --output text):deployment-notifications-$TF_VAR_environment" \
+            --subject "✅ Web Application Deployment Successful - $TF_VAR_environment" \
+            --message "Web application deployment completed successfully for environment: $TF_VAR_environment. All health checks passed. API URL: $API_GATEWAY_URL" \
+            --region us-east-1 || echo "Notification attempted"
+        fi
       - echo "Deployment completed successfully with operational excellence validation!"
 
 artifacts:
