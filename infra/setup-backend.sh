@@ -5,8 +5,8 @@
 
 set -e
 
-# Configuration
-BUCKET_NAME="project3-terraform-state-$(date +%s)"
+# Configuration - Using hardcoded bucket name to match buildspec-infra.yml
+BUCKET_NAME="project3-terraform-state-1757872273"
 REGION="us-east-1"
 DYNAMODB_TABLE="terraform-state-lock"
 
@@ -14,7 +14,11 @@ echo "Setting up Terraform backend infrastructure..."
 
 # Create S3 bucket for state storage
 echo "Creating S3 bucket: $BUCKET_NAME"
-aws s3 mb s3://$BUCKET_NAME --region $REGION
+if aws s3 ls "s3://$BUCKET_NAME" 2>/dev/null; then
+    echo "S3 bucket already exists: $BUCKET_NAME"
+else
+    aws s3 mb s3://$BUCKET_NAME --region $REGION
+fi
 
 # Enable versioning on the bucket
 echo "Enabling versioning on S3 bucket..."
@@ -45,16 +49,20 @@ aws s3api put-public-access-block \
 
 # Create DynamoDB table for state locking
 echo "Creating DynamoDB table for state locking: $DYNAMODB_TABLE"
-aws dynamodb create-table \
-    --table-name $DYNAMODB_TABLE \
-    --attribute-definitions AttributeName=LockID,AttributeType=S \
-    --key-schema AttributeName=LockID,KeyType=HASH \
-    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-    --region $REGION
-
-# Wait for table to be created
-echo "Waiting for DynamoDB table to be created..."
-aws dynamodb wait table-exists --table-name $DYNAMODB_TABLE --region $REGION
+if aws dynamodb describe-table --table-name $DYNAMODB_TABLE --region $REGION >/dev/null 2>&1; then
+    echo "DynamoDB table already exists: $DYNAMODB_TABLE"
+else
+    aws dynamodb create-table \
+        --table-name $DYNAMODB_TABLE \
+        --attribute-definitions AttributeName=LockID,AttributeType=S \
+        --key-schema AttributeName=LockID,KeyType=HASH \
+        --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+        --region $REGION
+    
+    # Wait for table to be created
+    echo "Waiting for DynamoDB table to be created..."
+    aws dynamodb wait table-exists --table-name $DYNAMODB_TABLE --region $REGION
+fi
 
 echo ""
 echo "✅ Backend infrastructure created successfully!"

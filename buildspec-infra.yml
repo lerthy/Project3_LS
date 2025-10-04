@@ -69,6 +69,13 @@ phases:
       - echo "=== OPERATIONAL EXCELLENCE Post-Deployment Validation ==="
       - echo "Create Lambda deployment package"
       - (cd web/lambda && zip -r ../../infra/lambda.zip .)
+      
+      # Validate Terraform backend prerequisites
+      - echo "Validating Terraform backend prerequisites..."
+      - chmod +x validate-backend.sh
+      - ./validate-backend.sh
+      
+      # Terraform init with backend
       - echo "Check if S3 backend exists and initialize appropriately"
       - |
         if aws s3api head-bucket --bucket "$TF_STATE_BUCKET" --region "$TF_STATE_REGION" 2>/dev/null; then
@@ -86,5 +93,10 @@ phases:
 
 artifacts:
   files:
+    - 'infra/tfplan'
+    - 'validate-backend.sh'
+    - 'deployment-report.txt'
+    - 'test-results.json'
+    - 'tfsec-report.json'
     - '**/*'
   name: terraform-artifacts

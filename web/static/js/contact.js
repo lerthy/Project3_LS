@@ -23,6 +23,8 @@ class ContactForm {
       return window.API_CONFIG.API_GATEWAY_URL;
     }
     
+    // Fallback for development/testing
+    return 'https://api.example.com/contact';
   }
 
   getApiKey() {

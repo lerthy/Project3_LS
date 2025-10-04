@@ -1,31 +1,45 @@
 // Mock AWS SDK SSM Client
 jest.mock('@aws-sdk/client-ssm', () => {
-  const mockSSMSend = jest.fn();
-  global.__ssmMock = { send: mockSSMSend };
+  const mockSend = jest.fn();
   return {
     SSMClient: jest.fn(() => ({
-      send: mockSSMSend
+      send: mockSend
     })),
-    GetParameterCommand: jest.fn((params) => params)
+    GetParameterCommand: jest.fn((params) => params),
+    __mockSend: mockSend  // Export the mock for external access
   };
 });
 
+// Get the mock from the module
+const { __mockSend } = jest.requireMock('@aws-sdk/client-ssm');
+const mockSSMSend = __mockSend;
+
+// Make the mock available globally
+global.__ssmMock = { send: mockSSMSend };
+
+// Mock PostgreSQL Client
+const mockConnect = jest.fn();
+const mockEnd = jest.fn();
+const mockQuery = jest.fn(async (sql) => {
+  // simulate INSERT returning row (robust to whitespace/newlines)
+  if (typeof sql === 'string' && /insert\s+into\s+contacts/i.test(sql)) {
+    return { rows: [{ id: 1, created_at: '2025-01-01T00:00:00Z' }] };
+  }
+  return { rows: [] };
+});
+
 jest.mock('pg', () => {
-  const connect = jest.fn();
-  const end = jest.fn();
-  const query = jest.fn(async (sql) => {
-    // simulate INSERT returning row (robust to whitespace/newlines)
-    if (typeof sql === 'string' && /insert\s+into\s+contacts/i.test(sql)) {
-      return { rows: [{ id: 1, created_at: '2025-01-01T00:00:00Z' }] };
-    }
-    return { rows: [] };
-  });
-  // expose for per-test control
-  global.__pgMock = { connect, end, query };
   return {
-    Client: jest.fn(() => ({ connect, end, query }))
+    Client: jest.fn(() => ({ 
+      connect: mockConnect, 
+      end: mockEnd, 
+      query: mockQuery 
+    }))
   };
 });
+
+// Make the mock available globally
+global.__pgMock = { connect: mockConnect, end: mockEnd, query: mockQuery };
 
 import { handler } from './index.js';
 
@@ -42,8 +56,15 @@ const baseBody = {
 
 describe('Lambda handler', () => {
   beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+    mockSSMSend.mockClear();
+    mockConnect.mockClear();
+    mockEnd.mockClear();
+    mockQuery.mockClear();
+    
     // Setup SSM mock responses for database credentials
-    global.__ssmMock.send.mockImplementation(async (command) => {
+    mockSSMSend.mockImplementation(async (command) => {
       const paramName = command.Name;
       switch (paramName) {
         case '/rds/rds_address':
@@ -59,11 +80,9 @@ describe('Lambda handler', () => {
       }
     });
     
-    // Reset all mocks
-    global.__pgMock.connect.mockClear();
-    global.__pgMock.end.mockClear();
-    global.__pgMock.query.mockClear();
-    global.__ssmMock.send.mockClear();
+    // Setup PostgreSQL mock defaults
+    mockConnect.mockResolvedValue(undefined);
+    mockEnd.mockResolvedValue(undefined);
   });
 
   it('handles OPTIONS preflight', async () => {

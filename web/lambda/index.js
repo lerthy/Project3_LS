@@ -1,15 +1,17 @@
-// Security note: Database credentials are retrieved from AWS Secrets Manager.
+// Security note: Database credentials are retrieved from AWS Secrets Manager or SSM.
 import { Client } from "pg";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
 // Initialize AWS clients
 const region = process.env.AWS_REGION || 'us-east-1';
 const secretsClient = new SecretsManagerClient({ region });
+const ssmClient = new SSMClient({ region });
 
 // Cache for database credentials to avoid repeated SSM calls
 let dbCredentials = null;
 
-// Function to get database credentials from Secrets Manager
+// Function to get database credentials from Secrets Manager or SSM (fallback for tests)
 async function getDbCredentials() {
   if (dbCredentials) {
     return dbCredentials;
@@ -17,23 +19,38 @@ async function getDbCredentials() {
 
   try {
     const secretArn = process.env.DB_SECRET_ARN;
-    if (!secretArn) {
-      throw new Error('DB_SECRET_ARN environment variable is not set');
-    }
-
-    const secretData = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretArn }));
-    const secret = JSON.parse(secretData.SecretString || '{}');
     
-    dbCredentials = {
-      host: secret.host,
-      user: secret.username,
-      password: secret.password,
-      database: secret.database
-    };
+    if (secretArn) {
+      // Production: Use Secrets Manager
+      const secretData = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretArn }));
+      const secret = JSON.parse(secretData.SecretString || '{}');
+      
+      dbCredentials = {
+        host: secret.host,
+        user: secret.username,
+        password: secret.password,
+        database: secret.database
+      };
+    } else {
+      // Fallback: Use SSM parameters (for tests and local development)
+      const [hostParam, userParam, passwordParam, dbParam] = await Promise.all([
+        ssmClient.send(new GetParameterCommand({ Name: '/rds/rds_address' })),
+        ssmClient.send(new GetParameterCommand({ Name: '/rds/db_username' })),
+        ssmClient.send(new GetParameterCommand({ Name: '/rds/db_password', WithDecryption: true })),
+        ssmClient.send(new GetParameterCommand({ Name: '/rds/db_name' }))
+      ]);
+
+      dbCredentials = {
+        host: hostParam.Parameter.Value,
+        user: userParam.Parameter.Value,
+        password: passwordParam.Parameter.Value,
+        database: dbParam.Parameter.Value
+      };
+    }
 
     return dbCredentials;
   } catch (error) {
-    console.error("Failed to retrieve database credentials from Secrets Manager:", error);
+    console.error("Failed to retrieve database credentials:", error);
     throw new Error("Database configuration error");
   }
 }
