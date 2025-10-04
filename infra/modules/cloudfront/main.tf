@@ -8,6 +8,7 @@ resource "aws_s3_bucket" "cloudfront_logs" {
   bucket        = "${var.s3_bucket_name}-cf-logs"
   force_destroy = true
   tags          = var.tags
+  provider      = aws
 }
 
 resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
