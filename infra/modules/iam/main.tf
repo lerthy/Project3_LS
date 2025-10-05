@@ -318,7 +318,7 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
         ]
         Resource = "*"
       },
-      # SNS permissions - scoped to project topics
+      # SNS permissions - all actions for project topics
       {
         Effect = "Allow"
         Action = [
@@ -332,6 +332,18 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "arn:aws:sns:${var.aws_region}:*:development-*",
           "arn:aws:sns:${var.aws_region}:*:multi-region-*"
         ]
+      },
+      # Additional SNS subscription permissions (broad scope needed for email subscriptions)
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Subscribe",
+          "sns:Unsubscribe",
+          "sns:ListSubscriptionsByTopic",
+          "sns:GetSubscriptionAttributes",
+          "sns:SetSubscriptionAttributes"
+        ]
+        Resource = "*"
       },
       # SQS permissions - scoped to project queues
       {

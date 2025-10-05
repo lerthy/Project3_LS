@@ -38,6 +38,9 @@ SNS permissions only allowed topics matching `project3-*`, but your actual topic
 - `manual-approval-notifications-development` ❌
 - `development-drift-alerts` ❌
 
+### 4. **Missing SNS Subscription Permissions**
+The role lacked `SNS:Subscribe` permission needed to create email subscriptions to SNS topics.
+
 ## ✅ Solutions Applied
 
 ### Fix 1: Added Missing S3 Permissions
@@ -76,30 +79,73 @@ Resource = [
 ]
 ```
 
-## 📋 Next Steps
-
-### 1. Apply the IAM Changes First
-```bash
-cd infra
-terraform init
-terraform plan -target=module.iam
-terraform apply -target=module.iam -auto-approve
+### Fix 4: Added SNS Subscription Permissions
+Added a new policy statement for SNS subscription operations:
+```terraform
+{
+  Effect = "Allow"
+  Action = [
+    "sns:Subscribe",
+    "sns:Unsubscribe",
+    "sns:ListSubscriptionsByTopic",
+    "sns:GetSubscriptionAttributes",
+    "sns:SetSubscriptionAttributes"
+  ]
+  Resource = "*"
+}
 ```
 
-### 2. Then Deploy Full Infrastructure
-Once IAM changes are applied, trigger your CodeBuild pipeline again:
+**Note**: SNS:Subscribe needs broader resource scope because subscription ARNs are created dynamically and can't be predicted before creation.
+
+## 📋 Next Steps
+
+### ⚠️ IMPORTANT: The Code Changes Need to be Applied to AWS First!
+
+The Terraform code has been updated, but **the actual IAM role in AWS still has the old permissions**. You MUST apply the IAM changes BEFORE running your pipeline again.
+
+### 🚀 QUICKEST FIX - Run This Command:
+
 ```bash
-# Via AWS Console or
+# From the project root directory:
+./fix-iam-now.sh
+```
+
+This script will:
+1. ✅ Connect to your AWS account
+2. ✅ Apply ONLY the IAM module changes
+3. ✅ Update the CodeBuild role with all missing permissions
+4. ✅ Enable your pipeline to succeed
+
+### Alternative: Manual Terraform Apply
+
+If you prefer to run the commands manually:
+
+```bash
+cd infra
+
+# Initialize Terraform with your backend
+terraform init \
+  -backend-config="bucket=terraform-state-project4-sb" \
+  -backend-config="key=project4/terraform.tfstate" \
+  -backend-config="region=eu-north-1" \
+  -backend-config="encrypt=true" \
+  -backend-config="dynamodb_table=terraform-state-lock" \
+  -reconfigure
+
+# Apply ONLY IAM changes
+terraform apply -target=module.iam -auto-approve -lock=false -refresh=false
+```
+
+### After Applying IAM Changes:
+
+```bash
+# Commit and push your code changes
 git add .
 git commit -m "fix: Add missing IAM permissions for S3 and SNS operations"
 git push origin project-4
-```
 
-### 3. Monitor the Deployment
-Watch for these specific operations that previously failed:
-- ✅ S3 bucket encryption deletion on `project3-rpo-backup-metadata-*`
-- ✅ CloudFront logs bucket ACL read
-- ✅ SNS topic KMS key attribute updates
+# Your pipeline will automatically trigger with the new permissions!
+```
 
 ## 🎯 Expected Outcome
 
