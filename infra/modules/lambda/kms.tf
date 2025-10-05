@@ -51,7 +51,7 @@ resource "aws_kms_key" "lambda_env_encryption" {
         Sid    = "Allow CodeBuild Service"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
+          Service = "codebuild.amazonaws.com"
         }
         Action = [
           "kms:Decrypt",

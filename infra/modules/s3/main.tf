@@ -212,18 +212,22 @@ locals {
 resource "aws_s3_object" "website_files" {
   for_each = local.website_files
 
-  bucket       = aws_s3_bucket.website.id
-  key          = each.key
-  source       = each.value
-  content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
-  etag         = filemd5(each.value)
+  bucket                 = aws_s3_bucket.website.id
+  key                    = each.key
+  source                 = each.value
+  content_type           = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
+  etag                   = filemd5(each.value)
+  server_side_encryption = "aws:kms"
+  kms_key_id            = aws_kms_key.s3_website_encryption.arn
 }
 
 # Generate dynamic config.js with API Gateway configuration
 resource "aws_s3_object" "config_js" {
-  bucket       = aws_s3_bucket.website.id
-  key          = "js/config.js"
-  content_type = "application/javascript"
+  bucket                 = aws_s3_bucket.website.id
+  key                    = "js/config.js"
+  content_type           = "application/javascript"
+  server_side_encryption = "aws:kms"
+  kms_key_id            = aws_kms_key.s3_website_encryption.arn
 
   content = templatefile("${path.module}/templates/config.js.tpl", {
     api_gateway_url = var.api_gateway_url
@@ -242,19 +246,23 @@ resource "aws_s3_object" "js_files" {
     for k, v in local.js_files : k => v if k != "js/config.js"
   }
 
-  bucket       = aws_s3_bucket.website.id
-  key          = each.key
-  source       = each.value
-  content_type = "application/javascript"
-  etag         = filemd5(each.value)
+  bucket                 = aws_s3_bucket.website.id
+  key                    = each.key
+  source                 = each.value
+  content_type           = "application/javascript"
+  etag                   = filemd5(each.value)
+  server_side_encryption = "aws:kms"
+  kms_key_id            = aws_kms_key.s3_website_encryption.arn
 }
 
 resource "aws_s3_object" "asset_files" {
   for_each = local.asset_files
 
-  bucket       = aws_s3_bucket.website.id
-  key          = each.key
-  source       = each.value
-  content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
-  etag         = filemd5(each.value)
+  bucket                 = aws_s3_bucket.website.id
+  key                    = each.key
+  source                 = each.value
+  content_type           = lookup(local.mime_types, regex("\\.[^.]+$", each.key), "application/octet-stream")
+  etag                   = filemd5(each.value)
+  server_side_encryption = "aws:kms"
+  kms_key_id            = aws_kms_key.s3_website_encryption.arn
 }

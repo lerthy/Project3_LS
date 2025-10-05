@@ -6,6 +6,11 @@ data "aws_vpc" "default" {
 
 # Import existing resources to prevent conflicts
 import {
+  to = aws_secretsmanager_secret.db_credentials
+  id = "project3/db-credentials"
+}
+
+import {
   to = aws_secretsmanager_secret.db_credentials_standby
   id = "project3/db-credentials-standby"
 }
