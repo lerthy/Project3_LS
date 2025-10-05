@@ -21,24 +21,6 @@ resource "aws_kms_key" "lambda_env_encryption" {
         Resource = "*"
       },
       {
-        Sid    = "Allow account principals with IAM permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = [
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"
-          ]
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:GenerateDataKey*",
-          "kms:ReEncrypt*"
-        ]
-        Resource = "*"
-      },
-      {
         Sid    = "Allow Lambda Service"
         Effect = "Allow"
         Principal = {

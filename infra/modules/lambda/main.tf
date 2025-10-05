@@ -89,7 +89,7 @@ resource "aws_iam_role_policy" "lambda_secrets_policy" {
 
 # Lambda Function with performance optimizations
 resource "aws_lambda_function" "contact" {
-  filename      = "lambda-deployment.zip"
+  filename      = "../../web/lambda/lambda-deployment.zip"
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
   handler       = "index.handler"

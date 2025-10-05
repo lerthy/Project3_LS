@@ -24,24 +24,6 @@ resource "aws_kms_key" "s3_website_encryption" {
         Resource = "*"
       },
       {
-        Sid    = "Allow account principals with IAM permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = [
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"
-          ]
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:GenerateDataKey*",
-          "kms:ReEncrypt*"
-        ]
-        Resource = "*"
-      },
-      {
         Sid    = "Allow S3 Service"
         Effect = "Allow"
         Principal = {
@@ -107,24 +89,6 @@ resource "aws_kms_key" "s3_codepipeline_encryption" {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "kms:*"
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow account principals with IAM permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = [
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"
-          ]
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:GenerateDataKey*",
-          "kms:ReEncrypt*"
-        ]
         Resource = "*"
       },
       {
