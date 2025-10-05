@@ -46,6 +46,13 @@ variable "db_password" {
   default     = "standbypassword"
 }
 
+variable "generated_password" {
+  description = "Generated password from primary RDS instance"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "db_name" {
   description = "Standby DB name"
   type        = string

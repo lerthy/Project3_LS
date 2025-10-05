@@ -4,6 +4,8 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# Data sources and imports only
+
 # Import existing resources to prevent conflicts (commented out - resources don't exist yet)
 # import {
 #   to = aws_secretsmanager_secret.db_credentials_standby
@@ -119,7 +121,8 @@ module "rds_standby" {
   region                = var.standby_region
   db_identifier         = "contact-db-standby"
   db_username           = var.db_username
-  db_password           = local.use_provided_password ? var.db_password : module.rds.generated_password
+  db_password           = var.db_password
+  generated_password    = module.rds.generated_password
   db_name               = var.db_name
   instance_class        = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
   allocated_storage     = 20

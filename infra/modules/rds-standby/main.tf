@@ -53,7 +53,7 @@ resource "aws_db_instance" "contact_db_standby" {
   publicly_accessible      = false
   deletion_protection      = true
   username                 = var.db_username
-  password                 = var.db_password
+  password                 = var.db_password != "" ? var.db_password : var.generated_password
   db_name                  = var.db_name
   vpc_security_group_ids   = [aws_security_group.rds_ingress_standby.id]
   skip_final_snapshot      = true
