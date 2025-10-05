@@ -54,8 +54,13 @@ output "dms_task_arn" {
   value       = var.environment == "production" && length(aws_dms_replication_task.rds_to_standby) > 0 ? aws_dms_replication_task.rds_to_standby[0].replication_task_arn : ""
 }
 
+# Local to handle password logic safely
+locals {
+  final_password = var.db_password != "" ? var.db_password : (length(random_password.db_password) > 0 ? random_password.db_password[0].result : "")
+}
+
 output "generated_password" {
   description = "Generated database password (sensitive)"
-  value       = var.db_password == "" ? random_password.db_password[0].result : var.db_password
+  value       = local.final_password
   sensitive   = true
 }

@@ -1,3 +1,8 @@
+# Local values for password handling
+locals {
+  final_password = var.db_password != "" ? var.db_password : (length(random_password.db_password) > 0 ? random_password.db_password[0].result : "")
+}
+
 resource "aws_iam_role" "dms_vpc_role" {
   name = "dms-vpc-role"
 
@@ -224,7 +229,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Database configuration
   username = var.db_username
-  password = var.db_password == "" ? random_password.db_password[0].result : var.db_password
+  password = local.final_password
   db_name  = var.db_name
 
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]

@@ -19,4 +19,7 @@ locals {
     DataClass  = "internal"
     Compliance = "standard"
   }
+  
+  # Password handling - avoid sensitive value conditionals in module calls
+  use_provided_password = var.db_password != ""
 }
