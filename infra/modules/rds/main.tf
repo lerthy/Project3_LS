@@ -1,7 +1,4 @@
-# Local values for password handling
-locals {
-  final_password = var.db_password != "" ? var.db_password : (length(random_password.db_password) > 0 ? random_password.db_password[0].result : "")
-}
+# No locals block - handle password directly in resource
 
 resource "aws_iam_role" "dms_vpc_role" {
   name = "dms-vpc-role"
@@ -229,7 +226,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Database configuration
   username = var.db_username
-  password = local.final_password
+  password = var.db_password != "" ? var.db_password : try(random_password.db_password[0].result, "")
   db_name  = var.db_name
 
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]
