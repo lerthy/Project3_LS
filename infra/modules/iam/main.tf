@@ -148,7 +148,9 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:PutBucketOwnershipControls",
           "s3:GetBucketOwnershipControls",
           "s3:GetBucketTagging",
-          "s3:PutBucketTagging"
+          "s3:PutBucketTagging",
+          "s3:GetBucketCors",
+          "s3:PutBucketCors"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
