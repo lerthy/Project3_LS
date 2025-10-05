@@ -127,14 +127,16 @@ resource "aws_network_acl" "public" {
   tags   = merge(var.tags, { Name = "${var.environment}-public-nacl" })
 }
 
-# Allow HTTPS inbound, deny all else (example)
+# Allow HTTPS inbound for web application (CloudFront origin access)
+# Note: This is required for public web access through CloudFront
+# tfsec:ignore:aws-ec2-no-public-ingress-acl
 resource "aws_network_acl_rule" "public_https_inbound" {
   network_acl_id = aws_network_acl.public.id
   rule_number    = 100
   egress         = false
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = "0.0.0.0/0"
+  cidr_block     = "0.0.0.0/0" # Required for public web access
   from_port      = 443
   to_port        = 443
 }

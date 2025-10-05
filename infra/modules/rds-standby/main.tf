@@ -19,16 +19,16 @@ resource "aws_security_group" "rds_ingress_standby" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Adjust to match your security requirements
-    description = "Allow Postgres from Lambda security group"
+    cidr_blocks = [data.aws_vpc.standby.cidr_block] # Restrict to VPC CIDR only
+    description = "Allow Postgres from VPC only"
   }
 
   egress {
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    cidr_blocks      = [data.aws_vpc.standby.cidr_block] # Restrict to VPC CIDR only
+    description      = "Allow outbound to VPC only"
   }
 
   tags = merge(var.tags, { Name = "rds-standby-private-sg" })

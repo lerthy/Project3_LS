@@ -4,6 +4,12 @@ provider "aws" {
   region = var.region
 }
 
+# Get VPC information for standby region
+data "aws_vpc" "standby" {
+  provider = aws.standby
+  id       = var.vpc_id
+}
+
 # Lambda function security group
 resource "aws_security_group" "lambda" {
   name_prefix = "${var.function_name}-sg-"
@@ -14,7 +20,8 @@ resource "aws_security_group" "lambda" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [data.aws_vpc.standby.cidr_block]
+    description = "Allow outbound to VPC only"
   }
 
   tags = merge(var.tags, {

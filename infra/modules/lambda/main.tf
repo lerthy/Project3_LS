@@ -35,7 +35,8 @@ resource "aws_security_group" "lambda_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
+    description = "Allow outbound to VPC only"
   }
 
   tags = merge(var.tags, { Name = "lambda-sg" })
