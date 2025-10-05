@@ -198,6 +198,7 @@ resource "aws_db_instance" "contact_db" {
   # Enable performance insights
   performance_insights_enabled          = true
   performance_insights_retention_period = 7
+  performance_insights_kms_key_id       = aws_kms_key.rds_encryption.arn
   identifier                            = var.db_identifier
   engine                                = "postgres"
   engine_version                        = var.engine_version

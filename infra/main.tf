@@ -90,6 +90,7 @@ module "cloudfront" {
   s3_bucket_name                 = module.s3.website_bucket_name
   price_class                    = var.environment == "production" ? "PriceClass_All" : "PriceClass_100"
   log_retention_days             = var.environment == "production" ? 90 : 30
+  environment                    = var.environment
   tags                           = local.common_tags
 }
 

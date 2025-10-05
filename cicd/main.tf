@@ -13,7 +13,8 @@ data "aws_secretsmanager_secret_version" "github_token" {
 
 # SNS Topic for Manual Approvals
 resource "aws_sns_topic" "manual_approval" {
-  name = "cicd-manual-approval-${var.environment}"
+  name              = "cicd-manual-approval-${var.environment}"
+  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
 
   tags = merge(var.tags, {
     Name = "manual-approval-${var.environment}"

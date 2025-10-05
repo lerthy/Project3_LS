@@ -25,7 +25,7 @@ resource "aws_subnet" "public" {
   cidr_block        = var.public_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
 
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false  # Don't auto-assign public IPs for security
 
   tags = merge(var.tags, {
     Name = "${var.environment}-public-subnet-${count.index + 1}"

@@ -25,6 +25,14 @@ resource "aws_s3_bucket_acl" "cloudfront_logs" {
   depends_on = [aws_s3_bucket_ownership_controls.cloudfront_logs]
 }
 
+# Enable versioning for CloudFront logs bucket
+resource "aws_s3_bucket_versioning" "cloudfront_logs_versioning" {
+  bucket = aws_s3_bucket.cloudfront_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # Block public access for CloudFront logs bucket
 resource "aws_s3_bucket_public_access_block" "cloudfront_logs_public_access" {
   bucket = aws_s3_bucket.cloudfront_logs.id
@@ -94,6 +102,47 @@ resource "aws_cloudfront_response_headers_policy" "optimized" {
   }
 }
 
+# WAF for CloudFront protection
+resource "aws_wafv2_web_acl" "cloudfront_waf" {
+  name        = "${var.environment}-cloudfront-waf"
+  description = "WAF for CloudFront distribution"
+  scope       = "CLOUDFRONT"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                 = "CommonRuleSetMetric"
+      sampled_requests_enabled    = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                 = "CloudFrontWAFMetric"
+    sampled_requests_enabled    = true
+  }
+
+  tags = var.tags
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
@@ -108,6 +157,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
+  web_acl_id          = aws_wafv2_web_acl.cloudfront_waf.arn
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]

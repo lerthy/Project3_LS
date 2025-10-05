@@ -240,10 +240,11 @@ resource "aws_api_gateway_method_settings" "contact_cache" {
   method_path = "*/*"
 
   settings {
-    metrics_enabled      = true
-    logging_level        = "INFO"
-    caching_enabled      = true
-    cache_ttl_in_seconds = 300 # 5 minutes cache
+    metrics_enabled        = true
+    logging_level          = "INFO"
+    caching_enabled        = true
+    cache_data_encrypted   = true  # Enable cache encryption
+    cache_ttl_in_seconds   = 300   # 5 minutes cache
 
     throttling_burst_limit = 100
     throttling_rate_limit  = 50

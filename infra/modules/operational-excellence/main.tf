@@ -439,7 +439,8 @@ resource "aws_cloudwatch_metric_alarm" "deployment_health_check" {
 
 # SNS Topic for drift alerts
 resource "aws_sns_topic" "drift_alerts" {
-  name = "${var.environment}-drift-alerts"
+  name              = "${var.environment}-drift-alerts"
+  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
 
   tags = merge(var.tags, {
     Name = "${var.environment}-drift-alerts"
