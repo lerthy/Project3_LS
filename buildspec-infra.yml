@@ -88,7 +88,8 @@ phases:
           echo "🚀 DEPLOYMENT PHASE: Applying infrastructure changes..."
           
           # Initialize Terraform with backend
-          terraform -chdir=infra init -backend-config="bucket=$TF_STATE_BUCKET" \
+          terraform -chdir=infra init -reconfigure \
+                                      -backend-config="bucket=$TF_STATE_BUCKET" \
                                       -backend-config="key=$TF_STATE_KEY" \
                                       -backend-config="region=$TF_STATE_REGION" \
                                       -backend-config="encrypt=true" \
@@ -136,7 +137,7 @@ phases:
       - |
         if [ -n "$TF_STATE_BUCKET" ] && [ -n "$TF_STATE_KEY" ] && [ -n "$TF_STATE_REGION" ] && [ -n "$TF_STATE_TABLE" ]; then
           echo "Initializing Terraform with S3 backend..."
-          terraform -chdir=infra init \
+          terraform -chdir=infra init -reconfigure \
             -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="key=$TF_STATE_KEY" \
             -backend-config="region=$TF_STATE_REGION" \
@@ -144,7 +145,7 @@ phases:
             -backend-config="dynamodb_table=$TF_STATE_TABLE"
         else
           echo "No backend configuration provided, using local state..."
-          terraform -chdir=infra init
+          terraform -chdir=infra init -reconfigure
         fi
       - echo "Validating Terraform state consistency..."
       - echo "⚠️  Bypassing state lock and refresh to avoid permission issues..."
