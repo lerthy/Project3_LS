@@ -176,7 +176,8 @@ phases:
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
         else
-          echo "=== P2 RELIABILITY: INFRASTRUCTURE DEPLOYMENT WITH ROLLBACK PROTECTION ==="
+          echo "=== INFRASTRUCTURE DEPLOYMENT ==="
+          echo "Deploying all infrastructure at once..."
           
           # Initialize rollback system for infrastructure
           export SERVICE_NAME="infrastructure"
@@ -184,19 +185,7 @@ phases:
             ./scripts/automated-rollback.sh init
           fi
           
-          echo "=== PHASE 1: Deploy IAM permissions first ==="
-          if ! terraform -chdir=infra apply -target=module.iam -auto-approve -lock=false; then
-            echo "❌ IAM deployment failed - initiating rollback"
-            if [ -f "scripts/automated-rollback.sh" ]; then
-              ./scripts/automated-rollback.sh rollback "IAM deployment failure"
-            fi
-            exit 1
-          fi
-          
-          echo "Waiting 30 seconds for IAM propagation..."
-          sleep 30
-          
-          echo "=== PHASE 2: Deploy remaining infrastructure ==="
+          # Deploy everything at once to avoid permission issues
           if ! terraform -chdir=infra apply -auto-approve -lock=false tfplan; then
             echo "❌ Infrastructure deployment failed - initiating rollback"
             if [ -f "scripts/automated-rollback.sh" ]; then
@@ -205,7 +194,7 @@ phases:
             exit 1
           fi
           
-          echo "🎉 P2 RELIABILITY: Infrastructure deployment completed successfully with rollback protection!"
+          echo "🎉 Infrastructure deployment completed successfully!"
         fi
 
 artifacts:
