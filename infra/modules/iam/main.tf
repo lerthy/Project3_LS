@@ -162,7 +162,9 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:GetAccelerateConfiguration",
           "s3:PutAccelerateConfiguration",
           "s3:GetObjectLockConfiguration",
-          "s3:PutObjectLockConfiguration"
+          "s3:PutObjectLockConfiguration",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:PutBucketObjectLockConfiguration"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
@@ -297,6 +299,71 @@ resource "aws_iam_role_policy" "codebuild_infra_policy" {
       }
     ]
   })
+}
+
+# Policy 5: Additional infrastructure services (DMS, Route53, WAF, etc.) - MANAGED POLICY
+resource "aws_iam_policy" "codebuild_additional_infra_policy" {
+  name = "codebuild-additional-infra-permissions-project3"
+  path = "/"
+  description = "Additional infrastructure permissions for CodeBuild (DMS, Route53, WAF, EventBridge, Backup)"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # DMS permissions for Database Migration Service
+      {
+        Effect = "Allow"
+        Action = [
+          "dms:*"
+        ]
+        Resource = "*"
+      },
+      # Route53 permissions for DNS and health checks
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:*"
+        ]
+        Resource = "*"
+      },
+      # WAFv2 permissions for Web Application Firewall
+      {
+        Effect = "Allow"
+        Action = [
+          "wafv2:*"
+        ]
+        Resource = "*"
+      },
+      # EventBridge permissions for automation
+      {
+        Effect = "Allow"
+        Action = [
+          "events:*"
+        ]
+        Resource = "*"
+      },
+      # Backup permissions for AWS Backup service
+      {
+        Effect = "Allow"
+        Action = [
+          "backup:*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+  
+  tags = {
+    Environment = "development"
+    Project     = "contact-form-webapp"
+    ManagedBy   = "terraform"
+  }
+}
+
+# Attach the managed policy to CodeBuild role
+resource "aws_iam_role_policy_attachment" "codebuild_additional_infra_policy" {
+  role       = aws_iam_role.codebuild_role.name
+  policy_arn = aws_iam_policy.codebuild_additional_infra_policy.arn
 }
 
 # Policy 4: Configuration and monitoring services
