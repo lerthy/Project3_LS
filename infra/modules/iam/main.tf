@@ -134,12 +134,19 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:PutBucketVersioning",
           "s3:PutBucketEncryption",
           "s3:GetBucketEncryption",
+          "s3:DeleteBucketEncryption",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetEncryptionConfiguration",
           "s3:PutBucketPublicAccessBlock",
           "s3:GetBucketPublicAccessBlock",
           "s3:PutBucketWebsite",
           "s3:GetBucketWebsite",
           "s3:PutBucketNotification",
-          "s3:GetBucketNotification"
+          "s3:GetBucketNotification",
+          "s3:GetBucketAcl",
+          "s3:PutBucketAcl",
+          "s3:PutBucketOwnershipControls",
+          "s3:GetBucketOwnershipControls"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
@@ -147,7 +154,9 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "arn:aws:s3:::my-website-bucket-*",
           "arn:aws:s3:::my-website-bucket-*/*",
           "arn:aws:s3:::codepipeline-artifacts-*",
-          "arn:aws:s3:::codepipeline-artifacts-*/*"
+          "arn:aws:s3:::codepipeline-artifacts-*/*",
+          "arn:aws:s3:::project3-*",
+          "arn:aws:s3:::project3-*/*"
         ]
       },
       # DynamoDB permissions for Terraform state locking
@@ -316,7 +325,12 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "sns:*"
         ]
         Resource = [
-          "arn:aws:sns:${var.aws_region}:*:project3-*"
+          "arn:aws:sns:${var.aws_region}:*:project3-*",
+          "arn:aws:sns:${var.aws_region}:*:*-alerts",
+          "arn:aws:sns:${var.aws_region}:*:cicd-*",
+          "arn:aws:sns:${var.aws_region}:*:manual-approval-*",
+          "arn:aws:sns:${var.aws_region}:*:development-*",
+          "arn:aws:sns:${var.aws_region}:*:multi-region-*"
         ]
       },
       # SQS permissions - scoped to project queues
