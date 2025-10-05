@@ -5,6 +5,8 @@ Both pipelines must enforce **linting** and **unit test coverage checks**.
 
 ---
 
+
+
 ## Requirements
 
 ### 1. General
