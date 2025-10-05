@@ -92,10 +92,11 @@ resource "aws_iam_role_policy_attachment" "codebuild_base_policy" {
 
 # Split the large policy into multiple smaller policies to avoid the 10KB limit
 
-# Policy 1: Core compute and storage services
-resource "aws_iam_role_policy" "codebuild_core_policy" {
-  name = "codebuild-core-permissions"
-  role = aws_iam_role.codebuild_role.id
+# Policy 1: Core compute and storage services - MANAGED POLICY
+resource "aws_iam_policy" "codebuild_core_policy" {
+  name        = "codebuild-core-permissions-project3"
+  path        = "/"
+  description = "Core permissions for CodeBuild (S3, DynamoDB, CloudWatch Logs, STS)"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -108,12 +109,16 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
+          "logs:DescribeLogStreams",
+          "logs:ListTagsForResource",
+          "logs:TagResource",
+          "logs:UntagResource"
         ]
         Resource = [
-          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/codebuild/*",
-          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/*",
-          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/apigateway/*"
+          "arn:aws:logs:*:*:log-group:/aws/codebuild/*",
+          "arn:aws:logs:*:*:log-group:/aws/lambda/*",
+          "arn:aws:logs:*:*:log-group:/aws/apigateway/*",
+          "arn:aws:logs:*:*:log-group:/apigw/*"
         ]
       },
       # S3 permissions - scoped to specific buckets
@@ -164,7 +169,12 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:GetObjectLockConfiguration",
           "s3:PutObjectLockConfiguration",
           "s3:GetBucketObjectLockConfiguration",
-          "s3:PutBucketObjectLockConfiguration"
+          "s3:PutBucketObjectLockConfiguration",
+          "s3:GetIntelligentTieringConfiguration",
+          "s3:PutIntelligentTieringConfiguration",
+          "s3:GetObjectTagging",
+          "s3:PutObjectTagging",
+          "s3:DeleteObjectTagging"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
@@ -191,7 +201,7 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "dynamodb:ListTagsOfResource"
         ]
         Resource = [
-          "arn:aws:dynamodb:${var.aws_region}:*:table/terraform-*"
+          "arn:aws:dynamodb:*:*:table/terraform-*"
         ]
       },
       # STS permissions for assume role
@@ -205,6 +215,18 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
       }
     ]
   })
+
+  tags = {
+    Environment = "development"
+    Project     = "contact-form-webapp"
+    ManagedBy   = "terraform"
+  }
+}
+
+# Attach core policy to CodeBuild role
+resource "aws_iam_role_policy_attachment" "codebuild_core_policy" {
+  role       = aws_iam_role.codebuild_role.name
+  policy_arn = aws_iam_policy.codebuild_core_policy.arn
 }
 
 # Policy 2: Application services (Lambda, API Gateway, CloudFront)
@@ -286,7 +308,8 @@ resource "aws_iam_role_policy" "codebuild_infra_policy" {
         ]
         Resource = [
           "arn:aws:rds:${var.aws_region}:*:db:contact-db*",
-          "arn:aws:rds:${var.aws_region}:*:subnet-group:*"
+          "arn:aws:rds:${var.aws_region}:*:subnet-group:*",
+          "arn:aws:rds:${var.aws_region}:*:pg:*"
         ]
       },
       # EC2 permissions for VPC and Security Groups
@@ -389,6 +412,14 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "arn:aws:ssm:${var.aws_region}:*:parameter/rds/*"
         ]
       },
+      # SSM DescribeParameters permission (needs wildcard resource)
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:DescribeParameters"
+        ]
+        Resource = "*"
+      },
       # Secrets Manager permissions (multi-region support for disaster recovery)
       {
         Effect = "Allow"
@@ -455,6 +486,23 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "arn:aws:kms:${var.aws_region}:*:key/*",
           "arn:aws:kms:${var.aws_region}:*:alias/project3-*"
         ]
+      },
+      # KMS ListAliases permission (needs wildcard resource)
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:ListAliases",
+          "kms:ListKeys"
+        ]
+        Resource = "*"
+      },
+      # Application Auto Scaling permissions
+      {
+        Effect = "Allow"
+        Action = [
+          "application-autoscaling:*"
+        ]
+        Resource = "*"
       }
     ]
   })
