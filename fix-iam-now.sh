@@ -34,6 +34,7 @@ echo "  ✅ s3:DeleteBucketEncryption"
 echo "  ✅ s3:GetBucketAcl"
 echo "  ✅ s3:PutBucketAcl"
 echo "  ✅ SNS:Subscribe"
+echo "  ✅ Secrets Manager multi-region support"
 echo "  ✅ Coverage for project3-* S3 buckets"
 echo ""
 

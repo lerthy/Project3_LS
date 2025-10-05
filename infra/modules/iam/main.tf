@@ -300,14 +300,14 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "arn:aws:ssm:${var.aws_region}:*:parameter/rds/*"
         ]
       },
-      # Secrets Manager permissions
+      # Secrets Manager permissions (multi-region support for disaster recovery)
       {
         Effect = "Allow"
         Action = [
           "secretsmanager:*"
         ]
         Resource = [
-          "arn:aws:secretsmanager:${var.aws_region}:*:secret:project3/*"
+          "arn:aws:secretsmanager:*:*:secret:project3/*"
         ]
       },
       # CloudWatch permissions

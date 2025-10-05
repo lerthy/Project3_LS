@@ -233,4 +233,11 @@ resource "aws_db_instance" "contact_db" {
   tags = merge(var.tags, {
     Name = var.db_identifier
   })
+
+  # Ignore changes to Performance Insights KMS key - AWS doesn't allow modification after creation
+  lifecycle {
+    ignore_changes = [
+      performance_insights_kms_key_id
+    ]
+  }
 }
