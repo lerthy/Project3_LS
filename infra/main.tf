@@ -4,18 +4,33 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Import existing resources to prevent conflicts
+# Import existing resources to prevent conflicts (commented out - resources don't exist yet)
+# import {
+#   to = aws_secretsmanager_secret.db_credentials_standby
+#   id = "project3/db-credentials-standby"
+# }
+
+# import {
+#   to = module.lambda_standby.aws_cloudwatch_log_group.lambda
+#   id = "/aws/lambda/contact-form-standby"
+# }
+
+# Import existing IAM role to prevent conflicts
 import {
-  to = aws_secretsmanager_secret.db_credentials_standby
-  id = "project3/db-credentials-standby"
+  to = module.lambda.aws_iam_role.lambda_exec
+  id = "lambda_exec_role_project3"
 }
 
-import {
-  to = module.lambda_standby.aws_cloudwatch_log_group.lambda
-  id = "/aws/lambda/contact-form-standby"
-}
+# Import existing S3 buckets to prevent conflicts (commented out - buckets don't exist)
+# import {
+#   to = module.s3.aws_s3_bucket.website
+#   id = "my-website-bucket-project3-eunorth1-fresh"
+# }
 
-
+# import {
+#   to = module.s3.aws_s3_bucket.codepipeline_artifacts
+#   id = "codepipeline-artifacts-project3-eunorth1-fresh"
+# }
 
 # S3 Module
 # VPC Module - Primary Region
@@ -55,8 +70,8 @@ module "s3" {
     aws.standby = aws.standby
   }
 
-  website_bucket_name   = "my-website-bucket-project3-eunorth1-fresh"
-  artifacts_bucket_name = "codepipeline-artifacts-project3-eunorth1-fresh"
+  website_bucket_name   = "my-website-bucket-project3-eunorth1-unique-sb"
+  artifacts_bucket_name = "codepipeline-artifacts-project3-eunorth1-unique-sb"
   cloudfront_oai_id     = module.cloudfront.origin_access_identity_id
   api_gateway_url       = module.api_gateway.api_gateway_url
   api_key               = module.api_gateway.api_key
@@ -104,7 +119,7 @@ module "rds_standby" {
   region                = var.standby_region
   db_identifier         = "contact-db-standby"
   db_username           = var.db_username
-  db_password           = var.db_password
+  db_password           = var.db_password != "" ? var.db_password : module.rds.generated_password
   db_name               = var.db_name
   instance_class        = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
   allocated_storage     = 20
@@ -220,9 +235,9 @@ module "codepipeline" {
   codebuild_role_arn       = module.iam.codebuild_role_arn
   codepipeline_role_arn    = module.iam.codepipeline_role_arn
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
-  codestar_connection_arn  = "" # Will be set by the module itself
+  codestar_connection_arn  = "arn:aws:codestar-connections:eu-north-1:791544005401:connection/ca0bd438-6bf9-40b2-82ee-d6f9ff4329b4"
   repository_id            = "lerthy/Project3_LS"
-  branch_name              = "project4"
+  branch_name              = "project-4"
   aws_region               = var.aws_region
   infra_path_filters       = ["infra/**/*"]
   web_path_filters         = ["web/**/*"]

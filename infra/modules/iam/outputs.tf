@@ -7,3 +7,8 @@ output "codebuild_role_arn" {
   description = "ARN of the CodeBuild IAM role"
   value       = aws_iam_role.codebuild_role.arn
 }
+
+output "api_gateway_cloudwatch_role_arn" {
+  description = "ARN of the API Gateway CloudWatch Logs role"
+  value       = aws_iam_role.api_gateway_cloudwatch_role.arn
+}

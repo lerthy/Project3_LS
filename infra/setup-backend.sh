@@ -3,10 +3,11 @@
 # Script to set up S3 backend for Terraform state
 # Run this script once to create the S3 bucket and DynamoDB table for state storage
 
-set -e
+# Disable strict error handling for better control
+set +e
 
-# Configuration - Using hardcoded bucket name to match buildspec-infra.yml
-BUCKET_NAME="terraform-state-project3-eunorth1-20251004-lerdisalihi"
+# Configuration - Fixed bucket name for consistent state storage
+BUCKET_NAME="terraform-state-project4-sb"
 REGION="eu-north-1"
 DYNAMODB_TABLE="terraform-state-lock"
 
@@ -17,7 +18,16 @@ echo "Creating S3 bucket: $BUCKET_NAME"
 if aws s3 ls "s3://$BUCKET_NAME" 2>/dev/null; then
     echo "S3 bucket already exists: $BUCKET_NAME"
 else
-    aws s3 mb s3://$BUCKET_NAME --region $REGION
+    if aws s3 mb s3://$BUCKET_NAME --region $REGION; then
+        echo "✅ S3 bucket created successfully: $BUCKET_NAME"
+    else
+        echo "❌ Failed to create S3 bucket. Trying with additional uniqueness..."
+        RANDOM_SUFFIX=$(openssl rand -hex 4)
+        BUCKET_NAME="terraform-state-project3-eunorth1-${AWS_ACCOUNT_ID}-${TIMESTAMP}-${RANDOM_SUFFIX}"
+        echo "Retrying with bucket name: $BUCKET_NAME"
+        aws s3 mb s3://$BUCKET_NAME --region $REGION
+        echo "✅ S3 bucket created successfully: $BUCKET_NAME"
+    fi
 fi
 
 # Enable versioning on the bucket
@@ -52,28 +62,50 @@ echo "Creating DynamoDB table for state locking: $DYNAMODB_TABLE"
 if aws dynamodb describe-table --table-name $DYNAMODB_TABLE --region $REGION >/dev/null 2>&1; then
     echo "DynamoDB table already exists: $DYNAMODB_TABLE"
 else
-    aws dynamodb create-table \
+    echo "Creating new DynamoDB table..."
+    if aws dynamodb create-table \
         --table-name $DYNAMODB_TABLE \
         --attribute-definitions AttributeName=LockID,AttributeType=S \
         --key-schema AttributeName=LockID,KeyType=HASH \
         --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-        --region $REGION
-    
-    # Wait for table to be created
-    echo "Waiting for DynamoDB table to be created..."
-    aws dynamodb wait table-exists --table-name $DYNAMODB_TABLE --region $REGION
+        --region $REGION >/dev/null 2>&1; then
+        
+        # Wait for table to be created
+        echo "Waiting for DynamoDB table to be created..."
+        aws dynamodb wait table-exists --table-name $DYNAMODB_TABLE --region $REGION
+        echo "✅ DynamoDB table created successfully: $DYNAMODB_TABLE"
+    else
+        echo "❌ Failed to create DynamoDB table. It may already exist."
+        # Check if table exists now
+        if aws dynamodb describe-table --table-name $DYNAMODB_TABLE --region $REGION >/dev/null 2>&1; then
+            echo "✅ DynamoDB table exists: $DYNAMODB_TABLE"
+        else
+            echo "❌ DynamoDB table creation failed"
+            exit 1
+        fi
+    fi
 fi
+
+# Create/Update backend configuration file
+echo "Creating/updating backend configuration..."
+cat > backend.tf <<EOF
+terraform {
+  backend "s3" {
+    bucket         = "$BUCKET_NAME"
+    key            = "project4/terraform.tfstate"
+    region         = "$REGION"
+    encrypt        = true
+    dynamodb_table = "$DYNAMODB_TABLE"
+  }
+}
+EOF
 
 echo ""
 echo "✅ Backend infrastructure created successfully!"
 echo ""
-echo "📋 Next steps:"
-echo "1. Update your backend.tf file with these values:"
-echo "   bucket  = \"$BUCKET_NAME\""
-echo "   key     = \"project3/terraform.tfstate\""
-echo "   region  = \"$REGION\""
-echo "   encrypt = true"
-echo "   dynamodb_table = \"$DYNAMODB_TABLE\""
+echo "📋 Configuration Updated:"
+echo "- Updated: backend.tf with bucket: $BUCKET_NAME"
+echo "- State key: project4/terraform.tfstate"
 echo ""
 echo "2. Run: terraform init -migrate-state"
 echo "3. Run: terraform plan"

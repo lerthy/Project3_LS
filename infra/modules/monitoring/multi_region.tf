@@ -126,8 +126,10 @@ resource "aws_iam_role_policy_attachment" "alert_processor_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda function to process alerts
+# Lambda function to process alerts (disabled until ZIP file is provided)
 resource "aws_lambda_function" "alert_processor" {
+  count = var.enable_alert_processor ? 1 : 0
+  
   filename      = "${path.module}/alert_processor.zip"
   function_name = "multi-region-alert-processor"
   role          = aws_iam_role.alert_processor.arn

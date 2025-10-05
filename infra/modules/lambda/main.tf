@@ -184,5 +184,3 @@ resource "aws_lambda_function_event_invoke_config" "contact_eic" {
 }
 
 # Lambda permission is handled in the main configuration to avoid circular dependency
-
-data "aws_caller_identity" "current" {}

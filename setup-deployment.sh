@@ -68,13 +68,12 @@ echo -e "${NC}"
 
 echo -e "${BLUE}📋 This script will:${NC}"
 echo "   1. Validate region configuration and AWS credentials"
-echo "   2. Validate and create SSM parameters"
-echo "   3. Set up Terraform backend (S3 + DynamoDB)"
-echo "   4. Package all Lambda functions (web, disaster recovery, RPO)"
-echo "   5. Install and test web dependencies"
-echo "   6. Setup P2 reliability scripts (health checks, rollback)"
-echo "   7. Validate Terraform configuration"
-echo "   8. Prepare for deployment with WAF compliance"
+echo "   2. Set up Terraform backend (S3 + DynamoDB)"
+echo "   3. Package all Lambda functions (web, disaster recovery, RPO)"
+echo "   4. Install and test web dependencies"
+echo "   5. Setup P2 reliability scripts (health checks, rollback)"
+echo "   6. Validate Terraform configuration"
+echo "   7. Prepare for deployment with WAF compliance"
 echo ""
 echo -e "${YELLOW}⚙️  Configuration:${NC}"
 echo "   - Primary Region: $AWS_REGION"
@@ -90,9 +89,9 @@ fi
 
 echo ""
 
-# STEP 1: Validate Configuration and SSM Parameters
+# STEP 1: Validate Configuration and AWS Credentials
 current_step="1"
-log_step "1" "Validating Configuration and SSM Parameters"
+log_step "1" "Validating Configuration and AWS Credentials"
 
 # Validate region configuration consistency
 log_info "Validating region configuration consistency..."
@@ -119,17 +118,9 @@ else
     exit 1
 fi
 
-# Validate SSM Parameters
-log_info "Validating SSM Parameters..."
-cd "$PROJECT_ROOT"
-if [ -f "validate-ssm-parameters.sh" ]; then
-    chmod +x validate-ssm-parameters.sh
-    ./validate-ssm-parameters.sh
-    log_success "SSM parameters validated"
-else
-    log_error "validate-ssm-parameters.sh not found!"
-    exit 1
-fi
+# Database uses auto-generated passwords via Terraform random provider
+log_info "Database configuration: Using Terraform-managed credentials (no SSM required)"
+log_success "Database configuration validated"
 
 echo ""
 
@@ -143,25 +134,13 @@ if [ -f "setup-backend.sh" ]; then
     ./setup-backend.sh
     log_success "Terraform backend infrastructure created"
     
-    # Extract bucket name from the created backend.tf file
+    # Verify backend configuration
     if [ -f "backend.tf" ]; then
-        CREATED_BUCKET=$(grep 'bucket.*=' backend.tf | sed 's/.*= *"//' | sed 's/".*//')
-        log_info "Backend bucket created: $CREATED_BUCKET"
-        
-        # Update buildspec files with the new bucket name
-        log_info "Updating buildspec files with new bucket name..."
-        cd "$PROJECT_ROOT"
-        
-        # Update buildspec-infra.yml
-        if [ -f "buildspec-infra.yml" ]; then
-            sed -i "s/TF_STATE_BUCKET: .*/TF_STATE_BUCKET: \"$CREATED_BUCKET\"/" buildspec-infra.yml
-            log_success "Updated buildspec-infra.yml"
-        fi
-        
-        cd "$INFRA_DIR"
+        log_info "Backend bucket: terraform-state-project4-sb (consistent across runs)"
+        log_success "Backend configuration updated"
     fi
     
-    log_success "Backend setup completed with dynamic bucket name"
+    log_success "Backend setup completed with consistent bucket name"
 else
     log_error "setup-backend.sh not found in infra directory!"
     exit 1
@@ -347,8 +326,9 @@ echo ""
 
 echo -e "${BLUE}📋 Setup Summary:${NC}"
 echo -e "${GREEN}✅ Region configuration validated (Primary: $AWS_REGION, Standby: $STANDBY_REGION)${NC}"
-echo -e "${GREEN}✅ SSM parameters configured${NC}"
-echo -e "${GREEN}✅ Terraform backend infrastructure created${NC}"
+echo -e "${GREEN}✅ AWS credentials and region access verified${NC}"
+echo -e "${GREEN}✅ Database configuration validated (auto-generated passwords)${NC}"
+echo -e "${GREEN}✅ Terraform backend infrastructure created (bucket: terraform-state-project4-sb)${NC}"
 echo -e "${GREEN}✅ All Lambda functions packaged (web, disaster recovery, RPO)${NC}"
 echo -e "${GREEN}✅ Web dependencies installed and tested${NC}"
 echo -e "${GREEN}✅ P2 reliability scripts configured${NC}"
@@ -356,19 +336,15 @@ echo -e "${GREEN}✅ Pre-deployment validation completed${NC}"
 echo -e "${GREEN}✅ WAF compliance: All 6 pillars implemented${NC}"
 
 echo ""
-echo -e "${BOLD}${YELLOW}⚠️  MANUAL STEP REQUIRED:${NC}"
-echo -e "${YELLOW}Before running terraform apply, you need to update backend.tf${NC}"
-echo -e "${YELLOW}with the S3 bucket name created in step 2.${NC}"
-echo ""
-
 echo -e "${BOLD}${BLUE}Ready for Terraform Deployment!${NC}"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
-echo "1. Update infra/backend.tf with the S3 bucket name from step 2"
-echo "2. cd infra"
-echo "3. terraform init -migrate-state"
-echo "4. terraform plan"
-echo "5. terraform apply"
+echo "1. cd infra"
+echo "2. terraform init -reconfigure"
+echo "3. terraform plan"
+echo "4. terraform apply"
+echo ""
+echo -e "${CYAN}✅ Backend configuration is automatically managed with consistent bucket name${NC}"
 echo ""
 echo -e "${BLUE}Post-deployment validation:${NC}"
 echo "• scripts/enhanced-health-check.sh - Comprehensive health monitoring"

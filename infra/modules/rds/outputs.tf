@@ -53,3 +53,9 @@ output "dms_task_arn" {
   description = "DMS replication task ARN"
   value       = var.environment == "production" && length(aws_dms_replication_task.rds_to_standby) > 0 ? aws_dms_replication_task.rds_to_standby[0].replication_task_arn : ""
 }
+
+output "generated_password" {
+  description = "Generated database password (sensitive)"
+  value       = var.db_password == "" ? random_password.db_password[0].result : var.db_password
+  sensitive   = true
+}

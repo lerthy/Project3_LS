@@ -1,5 +1,5 @@
 resource "aws_iam_role" "dms_vpc_role" {
-  name = "dms-vpc-role-project3"
+  name = "dms-vpc-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,6 +13,11 @@ resource "aws_iam_role" "dms_vpc_role" {
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "dms_vpc_role_policy" {
+  role       = aws_iam_role.dms_vpc_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonDMSVPCManagementRole"
 }
 
 resource "aws_iam_role_policy" "dms_vpc_policy" {
@@ -219,7 +224,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Database configuration
   username = var.db_username
-  password = var.db_password
+  password = var.db_password == "" ? random_password.db_password[0].result : var.db_password
   db_name  = var.db_name
 
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]

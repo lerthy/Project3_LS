@@ -3,6 +3,10 @@
 # ============================================================================
 # This file contains KMS keys, password generation, and security configuration for RDS
 
+# Data sources for region and account information
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # KMS Key for RDS Encryption
 # ============================================================================
 
@@ -26,7 +30,7 @@ resource "aws_kms_key" "rds_encryption" {
         Sid    = "Allow account principals with IAM permissions"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action = [
           "kms:Decrypt",
@@ -56,7 +60,7 @@ resource "aws_kms_key" "rds_encryption" {
         Sid    = "Allow CodeBuild Service"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/codebuild-role-project3-v2"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action = [
           "kms:Decrypt",
@@ -66,6 +70,11 @@ resource "aws_kms_key" "rds_encryption" {
           "kms:ReEncrypt*"
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalTag/Purpose" = "codebuild"
+          }
+        }
       }
     ]
   })
@@ -80,9 +89,6 @@ resource "aws_kms_alias" "rds_encryption" {
   name          = "alias/rds-encryption-${var.db_identifier}"
   target_key_id = aws_kms_key.rds_encryption.key_id
 }
-
-# Get current AWS account ID
-data "aws_caller_identity" "current" {}
 
 # Random Password Generation (if needed)
 # ============================================================================

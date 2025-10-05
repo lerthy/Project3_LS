@@ -5,6 +5,7 @@
 
 # Data source to get current caller identity for account ID
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 # KMS Key for S3 Website Bucket Encryption
 resource "aws_kms_key" "s3_website_encryption" {
@@ -27,7 +28,7 @@ resource "aws_kms_key" "s3_website_encryption" {
         Sid    = "Allow account principals with IAM permissions"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action = [
           "kms:Decrypt",
@@ -110,7 +111,7 @@ resource "aws_kms_key" "s3_codepipeline_encryption" {
         Sid    = "Allow account principals with IAM permissions"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action = [
           "kms:Decrypt",

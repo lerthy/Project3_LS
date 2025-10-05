@@ -16,6 +16,12 @@ variable "alarm_actions" {
   default     = []
 }
 
+variable "enable_alert_processor" {
+  description = "Enable the alert processor Lambda function"
+  type        = bool
+  default     = false
+}
+
 variable "lambda_function_name" {
   description = "Lambda function name for alarms"
   type        = string

@@ -123,3 +123,36 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
     Stage   = aws_api_gateway_stage.api.stage_name
   }
 }
+
+# API Gateway CloudWatch Logs role for standby region
+resource "aws_iam_role" "api_gateway_cloudwatch_role_standby" {
+  provider = aws.standby
+  name     = "api-gateway-cloudwatch-role-standby-project3"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_policy_standby" {
+  provider   = aws.standby
+  role       = aws_iam_role.api_gateway_cloudwatch_role_standby.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# Set the API Gateway account configuration to use the CloudWatch Logs role in standby region
+resource "aws_api_gateway_account" "api_gateway_account_standby" {
+  provider            = aws.standby
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role_standby.arn
+}

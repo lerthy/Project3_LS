@@ -3,6 +3,10 @@
 # ============================================================================
 # Customer-managed KMS key for Lambda environment variables encryption
 
+# Data sources for region and account information
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # KMS Key for Lambda Environment Variables Encryption
 resource "aws_kms_key" "lambda_env_encryption" {
   description = "KMS key for Lambda environment variables encryption"
@@ -24,7 +28,7 @@ resource "aws_kms_key" "lambda_env_encryption" {
         Sid    = "Allow account principals with IAM permissions"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action = [
           "kms:Decrypt",
@@ -34,6 +38,11 @@ resource "aws_kms_key" "lambda_env_encryption" {
           "kms:ReEncrypt*"
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "lambda.${data.aws_region.current.name}.amazonaws.com"
+          }
+        }
       },
       {
         Sid    = "Allow Lambda Service"

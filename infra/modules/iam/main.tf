@@ -90,8 +90,11 @@ resource "aws_iam_role_policy_attachment" "codebuild_base_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"
 }
 
-resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "codebuild-least-privilege-permissions"
+# Split the large policy into multiple smaller policies to avoid the 10KB limit
+
+# Policy 1: Core compute and storage services
+resource "aws_iam_role_policy" "codebuild_core_policy" {
+  name = "codebuild-core-permissions"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -164,30 +167,32 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "arn:aws:dynamodb:${var.aws_region}:*:table/terraform-*"
         ]
       },
+      # STS permissions for assume role
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole",
+          "sts:GetCallerIdentity"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Policy 2: Application services (Lambda, API Gateway, CloudFront)
+resource "aws_iam_role_policy" "codebuild_app_policy" {
+  name = "codebuild-app-permissions"
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       # Lambda permissions
       {
         Effect = "Allow"
         Action = [
-          "lambda:CreateFunction",
-          "lambda:DeleteFunction",
-          "lambda:GetFunction",
-          "lambda:UpdateFunctionCode",
-          "lambda:UpdateFunctionConfiguration",
-          "lambda:ListVersionsByFunction",
-          "lambda:PublishVersion",
-          "lambda:CreateAlias",
-          "lambda:DeleteAlias",
-          "lambda:GetAlias",
-          "lambda:UpdateAlias",
-          "lambda:AddPermission",
-          "lambda:RemovePermission",
-          "lambda:GetPolicy",
-          "lambda:PutFunctionEventInvokeConfig",
-          "lambda:DeleteFunctionEventInvokeConfig",
-          "lambda:GetFunctionEventInvokeConfig",
-          "lambda:TagResource",
-          "lambda:UntagResource",
-          "lambda:ListTags"
+          "lambda:*"
         ]
         Resource = [
           "arn:aws:lambda:${var.aws_region}:*:function:contact-form*",
@@ -199,11 +204,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "apigateway:GET",
-          "apigateway:POST",
-          "apigateway:PUT",
-          "apigateway:DELETE",
-          "apigateway:PATCH"
+          "apigateway:*"
         ]
         Resource = [
           "arn:aws:apigateway:${var.aws_region}::/restapis",
@@ -214,40 +215,27 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "cloudfront:CreateDistribution",
-          "cloudfront:GetDistribution",
-          "cloudfront:UpdateDistribution",
-          "cloudfront:DeleteDistribution",
-          "cloudfront:CreateOriginAccessIdentity",
-          "cloudfront:GetOriginAccessIdentity",
-          "cloudfront:DeleteOriginAccessIdentity",
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetInvalidation",
-          "cloudfront:ListInvalidations",
-          "cloudfront:TagResource",
-          "cloudfront:ListTagsForResource"
+          "cloudfront:*"
         ]
         Resource = "*"
-      },
+      }
+    ]
+  })
+}
+
+# Policy 3: Infrastructure services (IAM, RDS, EC2)
+resource "aws_iam_role_policy" "codebuild_infra_policy" {
+  name = "codebuild-infra-permissions"
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       # IAM permissions - scoped to specific roles and policies
       {
         Effect = "Allow"
         Action = [
-          "iam:CreateRole",
-          "iam:DeleteRole",
-          "iam:GetRole",
-          "iam:UpdateRole",
-          "iam:PassRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
-          "iam:GetRolePolicy",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:TagRole",
-          "iam:UntagRole",
-          "iam:ListRoleTags"
+          "iam:*"
         ]
         Resource = [
           "arn:aws:iam::*:role/lambda*",
@@ -261,16 +249,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "rds:CreateDBInstance",
-          "rds:DeleteDBInstance",
-          "rds:DescribeDBInstances",
-          "rds:ModifyDBInstance",
-          "rds:CreateDBSubnetGroup",
-          "rds:DeleteDBSubnetGroup",
-          "rds:DescribeDBSubnetGroups",
-          "rds:AddTagsToResource",
-          "rds:ListTagsForResource",
-          "rds:RemoveTagsFromResource"
+          "rds:*"
         ]
         Resource = [
           "arn:aws:rds:${var.aws_region}:*:db:contact-db*",
@@ -281,41 +260,27 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "ec2:CreateVpc",
-          "ec2:DeleteVpc",
-          "ec2:DescribeVpcs",
-          "ec2:CreateSubnet",
-          "ec2:DeleteSubnet",
-          "ec2:DescribeSubnets",
-          "ec2:CreateSecurityGroup",
-          "ec2:DeleteSecurityGroup",
-          "ec2:DescribeSecurityGroups",
-          "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:AuthorizeSecurityGroupEgress",
-          "ec2:RevokeSecurityGroupIngress",
-          "ec2:RevokeSecurityGroupEgress",
-          "ec2:CreateTags",
-          "ec2:DescribeTags",
-          "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:CreateNetworkInterface",
-          "ec2:DeleteNetworkInterface",
-          "ec2:ModifyNetworkInterfaceAttribute"
+          "ec2:*"
         ]
         Resource = "*"
-      },
+      }
+    ]
+  })
+}
+
+# Policy 4: Configuration and monitoring services
+resource "aws_iam_role_policy" "codebuild_config_policy" {
+  name = "codebuild-config-permissions"
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       # SSM Parameter Store permissions
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameter",
-          "ssm:GetParameters",
-          "ssm:PutParameter",
-          "ssm:DeleteParameter",
-          "ssm:DescribeParameters",
-          "ssm:AddTagsToResource",
-          "ssm:ListTagsForResource",
-          "ssm:RemoveTagsFromResource"
+          "ssm:*"
         ]
         Resource = [
           "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*",
@@ -330,14 +295,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:CreateSecret",
-          "secretsmanager:DeleteSecret",
-          "secretsmanager:DescribeSecret",
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:PutSecretValue",
-          "secretsmanager:UpdateSecret",
-          "secretsmanager:TagResource",
-          "secretsmanager:UntagResource"
+          "secretsmanager:*"
         ]
         Resource = [
           "arn:aws:secretsmanager:${var.aws_region}:*:secret:project3/*"
@@ -347,13 +305,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "cloudwatch:PutMetricAlarm",
-          "cloudwatch:DeleteAlarms",
-          "cloudwatch:DescribeAlarms",
-          "cloudwatch:PutDashboard",
-          "cloudwatch:DeleteDashboards",
-          "cloudwatch:GetDashboard",
-          "cloudwatch:ListDashboards"
+          "cloudwatch:*"
         ]
         Resource = "*"
       },
@@ -361,16 +313,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "sns:CreateTopic",
-          "sns:DeleteTopic",
-          "sns:GetTopicAttributes",
-          "sns:SetTopicAttributes",
-          "sns:Subscribe",
-          "sns:Unsubscribe",
-          "sns:ListSubscriptionsByTopic",
-          "sns:TagResource",
-          "sns:UntagResource",
-          "sns:ListTagsForResource"
+          "sns:*"
         ]
         Resource = [
           "arn:aws:sns:${var.aws_region}:*:project3-*"
@@ -380,13 +323,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "sqs:CreateQueue",
-          "sqs:DeleteQueue",
-          "sqs:GetQueueAttributes",
-          "sqs:SetQueueAttributes",
-          "sqs:TagQueue",
-          "sqs:UntagQueue",
-          "sqs:ListQueueTags"
+          "sqs:*"
         ]
         Resource = [
           "arn:aws:sqs:${var.aws_region}:*:contact-form*",
@@ -397,33 +334,43 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
-          "kms:Describe*",
-          "kms:List*",
-          "kms:Get*",
-          "kms:Decrypt",
-          "kms:Encrypt",
-          "kms:GenerateDataKey*",
-          "kms:ReEncrypt*",
-          "kms:CreateKey",
-          "kms:CreateAlias",
-          "kms:DeleteAlias",
-          "kms:TagResource",
-          "kms:UntagResource"
+          "kms:*"
         ]
         Resource = [
           "arn:aws:kms:${var.aws_region}:*:key/*",
           "arn:aws:kms:${var.aws_region}:*:alias/project3-*"
         ]
-      },
-      # STS permissions for assume role
-      {
-        Effect = "Allow"
-        Action = [
-          "sts:AssumeRole",
-          "sts:GetCallerIdentity"
-        ]
-        Resource = "*"
       }
     ]
   })
+}
+
+# API Gateway CloudWatch Logs role
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+  name = "api-gateway-cloudwatch-role-project3"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_policy" {
+  role       = aws_iam_role.api_gateway_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# Set the API Gateway account configuration to use the CloudWatch Logs role
+resource "aws_api_gateway_account" "api_gateway_account" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
 }
