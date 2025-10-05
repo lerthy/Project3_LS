@@ -1,8 +1,4 @@
-# Locals for safe password handling
-locals {
-  # Safe password handling - avoid sensitive conditionals in outputs
-  final_password = var.db_password != "" ? var.db_password : try(random_password.db_password[0].result, "")
-}
+# Note: Password logic moved to outputs to avoid sensitive conditionals in locals
 
 resource "aws_iam_role" "dms_vpc_role" {
   name = "dms-vpc-role"
@@ -81,7 +77,7 @@ resource "aws_dms_endpoint" "source" {
   endpoint_type = "source"
   engine_name   = "postgres"
   username      = var.db_username
-  password      = var.db_password
+  password      = random_password.db_password[0].result
   server_name   = aws_db_instance.contact_db.address
   port          = 5432
   database_name = var.db_name
@@ -95,7 +91,7 @@ resource "aws_dms_endpoint" "target" {
   endpoint_type = "target"
   engine_name   = "postgres"
   username      = var.db_username
-  password      = var.db_password
+  password      = random_password.db_password[0].result
   server_name   = var.standby_rds_address # Set this variable to your standby RDS address
   port          = 5432
   database_name = var.db_name
@@ -230,7 +226,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Database configuration
   username = var.db_username
-  password = local.final_password
+  password = random_password.db_password[0].result
   db_name  = var.db_name
 
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]

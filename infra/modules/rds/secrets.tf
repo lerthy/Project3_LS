@@ -94,7 +94,7 @@ resource "aws_kms_alias" "rds_encryption" {
 # ============================================================================
 
 resource "random_password" "db_password" {
-  count   = var.db_password == "" ? 1 : 0
+  count   = 1  # Always generate password since db_password is empty
   length  = 32
   special = true
 

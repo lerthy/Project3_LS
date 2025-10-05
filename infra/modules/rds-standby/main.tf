@@ -1,9 +1,6 @@
 # Standby RDS instance in a different region (e.g., us-west-2)
 
-# Locals for safe password handling
-locals {
-  final_password = var.db_password != "" ? var.db_password : var.generated_password
-}
+# Note: Using generated password directly from primary RDS module
 
 provider "aws" {
   alias  = "standby"
@@ -59,7 +56,7 @@ resource "aws_db_instance" "contact_db_standby" {
   publicly_accessible      = false
   deletion_protection      = true
   username                 = var.db_username
-  password                 = local.final_password
+  password                 = var.generated_password
   db_name                  = var.db_name
   vpc_security_group_ids   = [aws_security_group.rds_ingress_standby.id]
   skip_final_snapshot      = true
