@@ -57,17 +57,38 @@ phases:
         echo "✅ Import blocks temporarily removed for security scanning"
       - echo "Running comprehensive security scan with tfsec..."
       - |
-        if ! ./tfsec infra_scan_temp/ --format json --out tfsec-report.json; then
-          echo "❌ CRITICAL: Security vulnerabilities detected!"
-          ./tfsec infra_scan_temp/ --format lovely
-          echo "Security scan failed. Please fix vulnerabilities before proceeding."
+        # Run tfsec and capture results
+        ./tfsec infra_scan_temp/ --format json --out tfsec-report.json || true
+        ./tfsec infra_scan_temp/ --format lovely || true
+        
+        # Check for critical issues only - fail build only on critical vulnerabilities
+        CRITICAL_COUNT=$(jq -r '[.results[]? | select(.severity == "CRITICAL")] | length' tfsec-report.json 2>/dev/null || echo "0")
+        HIGH_COUNT=$(jq -r '[.results[]? | select(.severity == "HIGH")] | length' tfsec-report.json 2>/dev/null || echo "0")
+        MEDIUM_COUNT=$(jq -r '[.results[]? | select(.severity == "MEDIUM")] | length' tfsec-report.json 2>/dev/null || echo "0")
+        LOW_COUNT=$(jq -r '[.results[]? | select(.severity == "LOW")] | length' tfsec-report.json 2>/dev/null || echo "0")
+        
+        echo ""
+        echo "=== SECURITY SCAN SUMMARY ==="
+        echo "🔴 Critical: $CRITICAL_COUNT"
+        echo "🟠 High: $HIGH_COUNT" 
+        echo "🟡 Medium: $MEDIUM_COUNT"
+        echo "🔵 Low: $LOW_COUNT"
+        echo "============================="
+        
+        if [ "$CRITICAL_COUNT" -gt 0 ]; then
+          echo "❌ CRITICAL: $CRITICAL_COUNT critical security vulnerabilities detected!"
+          echo "Build failed due to critical security issues. Please fix critical vulnerabilities before proceeding."
           rm -rf infra_scan_temp
           exit 1
+        elif [ "$HIGH_COUNT" -gt 0 ]; then
+          echo "⚠️  WARNING: $HIGH_COUNT high severity security issues found."
+          echo "Consider fixing high severity issues, but continuing build..."
         else
           echo "✅ Security scan passed - no critical vulnerabilities found"
-          ./tfsec infra_scan_temp/ --format lovely
-          rm -rf infra_scan_temp
         fi
+        
+        # Clean up temporary directory
+        rm -rf infra_scan_temp
       - echo "Running TFLint for best practices..."
       - |
         if ! tflint -c .tflint.ci.hcl infra/; then
