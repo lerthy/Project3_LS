@@ -17,11 +17,11 @@ data "aws_vpc" "default" {
 #   id = "/aws/lambda/contact-form-standby"
 # }
 
-# Import existing IAM role to prevent conflicts
-import {
-  to = module.lambda.aws_iam_role.lambda_exec
-  id = "lambda_exec_role_project3"
-}
+# Import existing IAM role to prevent conflicts (commented out for tfsec compatibility)
+# import {
+#   to = module.lambda.aws_iam_role.lambda_exec
+#   id = "lambda_exec_role_project3"
+# }
 
 # Import existing S3 buckets to prevent conflicts (commented out - buckets don't exist)
 # import {
