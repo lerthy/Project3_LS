@@ -461,7 +461,19 @@ resource "aws_iam_role_policy" "codebuild_config_policy" {
           "sns:Unsubscribe",
           "sns:ListSubscriptionsByTopic",
           "sns:GetSubscriptionAttributes",
-          "sns:SetSubscriptionAttributes"
+          "sns:SetSubscriptionAttributes",
+          "sns:ListTagsForResource",
+          "sns:TagResource",
+          "sns:UntagResource"
+        ]
+        Resource = "*"
+      },
+      # CodeStar Connections permissions (for GitHub integration)
+      {
+        Effect = "Allow"
+        Action = [
+          "codestar-connections:*",
+          "codeconnections:*"
         ]
         Resource = "*"
       },
