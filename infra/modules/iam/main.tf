@@ -112,7 +112,12 @@ resource "aws_iam_policy" "codebuild_core_policy" {
           "logs:DescribeLogStreams",
           "logs:ListTagsForResource",
           "logs:TagResource",
-          "logs:UntagResource"
+          "logs:UntagResource",
+          "logs:DescribeMetricFilters",
+          "logs:PutMetricFilter",
+          "logs:DeleteMetricFilter",
+          "logs:DeleteLogGroup",
+          "logs:PutRetentionPolicy"
         ]
         Resource = [
           "arn:aws:logs:*:*:log-group:/aws/codebuild/*",
