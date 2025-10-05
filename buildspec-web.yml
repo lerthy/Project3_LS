@@ -119,7 +119,7 @@ phases:
 
   post_build:
     commands:
-      - echo "=== P2 RELIABILITY: ENHANCED DEPLOYMENT WITH AUTOMATED ROLLBACK ==="
+      - echo "=== P2 RELIABILITY - ENHANCED DEPLOYMENT WITH AUTOMATED ROLLBACK ==="
       - |
         if [ "$DEPLOYMENT_STAGE" = "DEPLOY" ]; then
           echo "🚀 Initializing deployment with rollback protection..."
