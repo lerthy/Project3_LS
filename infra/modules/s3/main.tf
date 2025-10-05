@@ -1,7 +1,7 @@
 # S3 Bucket for Website
 resource "aws_s3_bucket" "website" {
   bucket        = var.website_bucket_name
-  force_destroy = true
+  force_destroy = false  # Prevent accidental deletion
 
   tags = var.tags
 }
@@ -72,7 +72,7 @@ resource "aws_s3_bucket_policy" "website_cloudfront_read" {
 # S3 Bucket for CodePipeline Artifacts
 resource "aws_s3_bucket" "codepipeline_artifacts" {
   bucket        = var.artifacts_bucket_name
-  force_destroy = true
+  force_destroy = false  # Prevent accidental deletion
 
   tags = var.tags
 }

@@ -10,11 +10,22 @@ resource "aws_security_group" "lambda" {
   description = "Security group for Lambda function ${var.function_name}"
   vpc_id      = var.vpc_id
 
+  # HTTPS outbound for API calls and AWS services
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS outbound for AWS services"
+  }
+
+  # PostgreSQL outbound to RDS
+  egress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["10.2.0.0/16"]  # Standby VPC CIDR only
+    description = "PostgreSQL access to standby RDS"
   }
 
   tags = merge(var.tags, {

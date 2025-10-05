@@ -6,7 +6,7 @@ resource "aws_cloudfront_origin_access_identity" "website" {
 # S3 bucket for CloudFront access logs
 resource "aws_s3_bucket" "cloudfront_logs" {
   bucket        = "${var.s3_bucket_name}-cf-logs"
-  force_destroy = true
+  force_destroy = false  # Prevent accidental deletion
   tags          = var.tags
   provider      = aws
 }
