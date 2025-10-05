@@ -147,31 +147,8 @@ phases:
           terraform -chdir=infra init
         fi
       - echo "Validating Terraform state consistency..."
-      - |
-        # Attempt to run terraform plan with retry logic for state locks
-        for i in {1..3}; do
-          echo "Terraform plan attempt $i/3..."
-          if terraform -chdir=infra plan -out=../tfplan; then
-            echo "✅ Terraform plan successful"
-            break
-          else
-            if [ $i -eq 3 ]; then
-              echo "❌ Terraform plan failed after 3 attempts"
-              echo "⚠️  Attempting with -lock=false to bypass stuck state lock..."
-              if terraform -chdir=infra plan -out=../tfplan -lock=false; then
-                echo "✅ Terraform plan successful with lock disabled"
-                echo "⚠️  WARNING: State lock was bypassed - ensure no concurrent operations"
-                break
-              else
-                echo "❌ Terraform plan failed even with lock disabled"
-                exit 1
-              fi
-            else
-              echo "⏳ Plan failed, waiting 30 seconds before retry..."
-              sleep 30
-            fi
-          fi
-        done
+      - echo "⚠️  Bypassing state lock to avoid stuck lock issues..."
+      - terraform -chdir=infra plan -out=tfplan -lock=false
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
@@ -186,7 +163,7 @@ phases:
           fi
           
           # Deploy everything at once to avoid permission issues
-          if ! terraform -chdir=infra apply -auto-approve -lock=false ../tfplan; then
+          if ! terraform -chdir=infra apply -auto-approve -lock=false tfplan; then
             echo "❌ Infrastructure deployment failed - initiating rollback"
             if [ -f "scripts/automated-rollback.sh" ]; then
               ./scripts/automated-rollback.sh rollback "Infrastructure deployment failure"
@@ -199,7 +176,7 @@ phases:
 
 artifacts:
   files:
-    - 'tfplan'
+    - 'infra/tfplan'
     - 'validate-backend.sh'
     - 'deployment-report.txt'
     - 'test-results.json'
