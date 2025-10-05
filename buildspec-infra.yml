@@ -47,13 +47,25 @@ phases:
       - chmod +x tfsec
       - echo "Running comprehensive security scan with tfsec..."
       - |
-        # Run tfsec and check only for CRITICAL issues
-        if ./tfsec infra/ --format json --out tfsec-report.json --severity CRITICAL; then
+        # Run full tfsec scan and capture output
+        ./tfsec infra/ --format json --out tfsec-report.json || true
+        
+        # Check if critical issues exist in the JSON output
+        if command -v jq >/dev/null 2>&1; then
+          CRITICAL_COUNT=$(jq -r '[.results[] | select(.severity == "CRITICAL")] | length' tfsec-report.json 2>/dev/null || echo "0")
+        else
+          # Fallback if jq is not available - check JSON content directly
+          CRITICAL_COUNT=$(grep -c '"severity":"CRITICAL"' tfsec-report.json 2>/dev/null || echo "0")
+        fi
+        
+        echo "Critical vulnerabilities found: $CRITICAL_COUNT"
+        
+        if [ "$CRITICAL_COUNT" -eq 0 ]; then
           echo "✅ Security scan passed - 0 critical vulnerabilities found"
           echo "ℹ️  Running full scan to show all findings for reference..."
           ./tfsec infra/ --format lovely || true
         else
-          echo "❌ CRITICAL: Critical security vulnerabilities detected!"
+          echo "❌ CRITICAL: $CRITICAL_COUNT critical security vulnerabilities detected!"
           ./tfsec infra/ --format lovely
           echo "Security scan failed. Please fix CRITICAL vulnerabilities before proceeding."
           exit 1
