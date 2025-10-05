@@ -20,7 +20,10 @@ import {
   id = "/aws/lambda/contact-form-standby"
 }
 
-
+import {
+  to = module.lambda.aws_iam_role.lambda_exec
+  id = "lambda_exec_role_project3"
+}
 
 # S3 Module
 # VPC Module - Primary Region
