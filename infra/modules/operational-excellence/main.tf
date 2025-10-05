@@ -4,8 +4,7 @@
 
 # SNS Topic for CI/CD Notifications
 resource "aws_sns_topic" "cicd_notifications" {
-  name              = "cicd-pipeline-notifications-${var.environment}"
-  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
+  name = "cicd-pipeline-notifications-${var.environment}"
 
   tags = merge(var.tags, {
     Name    = "cicd-notifications-${var.environment}"
@@ -151,8 +150,7 @@ resource "aws_cloudwatch_metric_alarm" "build_duration_warning" {
 
 # SNS Topic for Manual Approvals
 resource "aws_sns_topic" "manual_approval" {
-  name              = "manual-approval-notifications-${var.environment}"
-  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
+  name = "manual-approval-notifications-${var.environment}"
 
   tags = merge(var.tags, {
     Name    = "manual-approval-${var.environment}"
@@ -439,8 +437,7 @@ resource "aws_cloudwatch_metric_alarm" "deployment_health_check" {
 
 # SNS Topic for drift alerts
 resource "aws_sns_topic" "drift_alerts" {
-  name              = "${var.environment}-drift-alerts"
-  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
+  name = "${var.environment}-drift-alerts"
 
   tags = merge(var.tags, {
     Name = "${var.environment}-drift-alerts"

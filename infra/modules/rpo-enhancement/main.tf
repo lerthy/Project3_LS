@@ -3,8 +3,7 @@
 
 # SNS Topic for backup notifications
 resource "aws_sns_topic" "backup_notifications" {
-  name              = "backup-notifications-${var.environment}"
-  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
+  name = "backup-notifications-${var.environment}"
 
   tags = merge(var.tags, {
     Name = "backup-notifications"
