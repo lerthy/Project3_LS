@@ -146,7 +146,9 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:GetBucketAcl",
           "s3:PutBucketAcl",
           "s3:PutBucketOwnershipControls",
-          "s3:GetBucketOwnershipControls"
+          "s3:GetBucketOwnershipControls",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
@@ -251,7 +253,13 @@ resource "aws_iam_role_policy" "codebuild_infra_policy" {
           "arn:aws:iam::*:role/codebuild*",
           "arn:aws:iam::*:role/codepipeline*",
           "arn:aws:iam::*:role/rds*",
-          "arn:aws:iam::*:role/dms*"
+          "arn:aws:iam::*:role/dms*",
+          "arn:aws:iam::*:role/api-gateway*",
+          "arn:aws:iam::*:role/*drift*",
+          "arn:aws:iam::*:role/*backup*",
+          "arn:aws:iam::*:role/*disaster*",
+          "arn:aws:iam::*:policy/*",
+          "arn:aws:iam::*:instance-profile/*"
         ]
       },
       # RDS permissions
