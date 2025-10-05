@@ -45,16 +45,28 @@ phases:
       - echo "Installing tfsec security scanner..."
       - wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
       - chmod +x tfsec
+      - echo "Preparing files for security scan (handling Terraform import blocks)..."
+      - |
+        # Create temporary directory for tfsec scanning
+        mkdir -p infra_scan_temp
+        cp -r infra/* infra_scan_temp/
+        
+        # Remove import blocks that tfsec doesn't support (Terraform 1.5+ feature)
+        echo "Removing import blocks from all .tf files for tfsec compatibility..."
+        find infra_scan_temp -name "*.tf" -type f -print0 | xargs -0 sed -i '/^import {/,/^}/d'
+        echo "✅ Import blocks temporarily removed for security scanning"
       - echo "Running comprehensive security scan with tfsec..."
       - |
-        if ! ./tfsec infra/ --format json --out tfsec-report.json; then
+        if ! ./tfsec infra_scan_temp/ --format json --out tfsec-report.json; then
           echo "❌ CRITICAL: Security vulnerabilities detected!"
-          ./tfsec infra/ --format lovely
+          ./tfsec infra_scan_temp/ --format lovely
           echo "Security scan failed. Please fix vulnerabilities before proceeding."
+          rm -rf infra_scan_temp
           exit 1
         else
           echo "✅ Security scan passed - no critical vulnerabilities found"
-          ./tfsec infra/ --format lovely
+          ./tfsec infra_scan_temp/ --format lovely
+          rm -rf infra_scan_temp
         fi
       - echo "Running TFLint for best practices..."
       - |
