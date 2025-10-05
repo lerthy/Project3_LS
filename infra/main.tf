@@ -25,6 +25,11 @@ import {
   id = "lambda_exec_role_project3"
 }
 
+import {
+  to = module.lambda.aws_kms_alias.lambda_env_encryption
+  id = "alias/lambda-env-encryption"
+}
+
 # S3 Module
 # VPC Module - Primary Region
 module "primary_vpc" {
