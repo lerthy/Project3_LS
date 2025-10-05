@@ -150,7 +150,19 @@ resource "aws_iam_role_policy" "codebuild_core_policy" {
           "s3:GetBucketTagging",
           "s3:PutBucketTagging",
           "s3:GetBucketCors",
-          "s3:PutBucketCors"
+          "s3:PutBucketCors",
+          "s3:GetBucketRequestPayment",
+          "s3:PutBucketRequestPayment",
+          "s3:GetBucketLogging",
+          "s3:PutBucketLogging",
+          "s3:GetLifecycleConfiguration",
+          "s3:PutLifecycleConfiguration",
+          "s3:GetReplicationConfiguration",
+          "s3:PutReplicationConfiguration",
+          "s3:GetAccelerateConfiguration",
+          "s3:PutAccelerateConfiguration",
+          "s3:GetObjectLockConfiguration",
+          "s3:PutObjectLockConfiguration"
         ]
         Resource = [
           "arn:aws:s3:::terraform-state-*",
