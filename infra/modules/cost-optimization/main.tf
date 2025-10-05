@@ -6,11 +6,11 @@ resource "aws_cloudwatch_event_rule" "stop_resources" {
   count               = var.environment != "production" ? 1 : 0
   name                = "stop-resources-${var.environment}"
   description         = "Stop non-production resources after business hours"
-  schedule_expression = var.stop_schedule  # Default: 7 PM UTC (weekdays)
-  
+  schedule_expression = var.stop_schedule # Default: 7 PM UTC (weekdays)
+
   tags = merge(var.tags, {
-    Name = "stop-resources-${var.environment}"
-    Type = "cost-optimization"
+    Name    = "stop-resources-${var.environment}"
+    Type    = "cost-optimization"
     Purpose = "resource-scheduling"
   })
 }
@@ -19,11 +19,11 @@ resource "aws_cloudwatch_event_rule" "start_resources" {
   count               = var.environment != "production" ? 1 : 0
   name                = "start-resources-${var.environment}"
   description         = "Start non-production resources before business hours"
-  schedule_expression = var.start_schedule  # Default: 8 AM UTC (weekdays)
-  
+  schedule_expression = var.start_schedule # Default: 8 AM UTC (weekdays)
+
   tags = merge(var.tags, {
-    Name = "start-resources-${var.environment}"
-    Type = "cost-optimization"
+    Name    = "start-resources-${var.environment}"
+    Type    = "cost-optimization"
     Purpose = "resource-scheduling"
   })
 }
@@ -37,9 +37,9 @@ resource "aws_lambda_function" "resource_scheduler" {
   handler       = "index.handler"
   runtime       = "python3.9"
   timeout       = 300
-  
+
   source_code_hash = data.archive_file.scheduler_zip[0].output_base64sha256
-  
+
   environment {
     variables = {
       ENVIRONMENT     = var.environment
@@ -47,7 +47,7 @@ resource "aws_lambda_function" "resource_scheduler" {
       LAMBDA_FUNCTION = var.lambda_function_name
     }
   }
-  
+
   tags = merge(var.tags, {
     Name = "resource-scheduler-${var.environment}"
     Type = "cost-optimization"
@@ -59,7 +59,7 @@ data "archive_file" "scheduler_zip" {
   count       = var.environment != "production" ? 1 : 0
   type        = "zip"
   output_path = "${path.module}/scheduler.zip"
-  
+
   source {
     content = templatefile("${path.module}/scheduler.py", {
       environment = var.environment
@@ -85,7 +85,7 @@ resource "aws_iam_role" "scheduler_role" {
       }
     ]
   })
-  
+
   tags = var.tags
 }
 
@@ -154,9 +154,9 @@ resource "aws_cloudwatch_event_target" "stop_target" {
   rule      = aws_cloudwatch_event_rule.stop_resources[0].name
   target_id = "StopResourcesTarget"
   arn       = aws_lambda_function.resource_scheduler[0].arn
-  
+
   input = jsonencode({
-    action = "stop"
+    action      = "stop"
     environment = var.environment
   })
 }
@@ -166,9 +166,9 @@ resource "aws_cloudwatch_event_target" "start_target" {
   rule      = aws_cloudwatch_event_rule.start_resources[0].name
   target_id = "StartResourcesTarget"
   arn       = aws_lambda_function.resource_scheduler[0].arn
-  
+
   input = jsonencode({
-    action = "start"
+    action      = "start"
     environment = var.environment
   })
 }
@@ -209,7 +209,7 @@ resource "aws_cloudwatch_metric_alarm" "scheduler_errors" {
   dimensions = {
     FunctionName = aws_lambda_function.resource_scheduler[0].function_name
   }
-  
+
   tags = var.tags
 }
 

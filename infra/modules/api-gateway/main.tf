@@ -13,10 +13,10 @@ resource "aws_api_gateway_resource" "contact_resource" {
 }
 
 resource "aws_api_gateway_method" "post_contact" {
-  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
-  resource_id   = aws_api_gateway_resource.contact_resource.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id      = aws_api_gateway_rest_api.contact_api.id
+  resource_id      = aws_api_gateway_resource.contact_resource.id
+  http_method      = "POST"
+  authorization    = "NONE"
   api_key_required = true
 }
 
@@ -43,7 +43,7 @@ resource "aws_api_gateway_integration" "lambda_integration_options" {
   resource_id = aws_api_gateway_resource.contact_resource.id
   http_method = aws_api_gateway_method.options_contact.http_method
   type        = "MOCK"
-  
+
   request_templates = {
     "application/json" = jsonencode({
       statusCode = 200
@@ -127,7 +127,7 @@ resource "aws_api_gateway_api_key" "contact_api_key" {
   name        = "contact-form-api-key"
   description = "API key for contact form submissions"
   enabled     = true
-  
+
   tags = merge(var.tags, {
     Name = "contact-form-api-key"
     Type = "api-authentication"
@@ -136,8 +136,8 @@ resource "aws_api_gateway_api_key" "contact_api_key" {
 
 # Usage Plan for rate limiting and throttling
 resource "aws_api_gateway_usage_plan" "contact_usage_plan" {
-  name         = "contact-form-usage-plan"
-  description  = "Usage plan for contact form API"
+  name        = "contact-form-usage-plan"
+  description = "Usage plan for contact form API"
 
   api_stages {
     api_id = aws_api_gateway_rest_api.contact_api.id
@@ -145,13 +145,13 @@ resource "aws_api_gateway_usage_plan" "contact_usage_plan" {
   }
 
   quota_settings {
-    limit  = 1000    # 1000 requests per day
+    limit  = 1000 # 1000 requests per day
     period = "DAY"
   }
 
   throttle_settings {
-    rate_limit  = 10   # 10 requests per second
-    burst_limit = 20   # 20 burst requests
+    rate_limit  = 10 # 10 requests per second
+    burst_limit = 20 # 20 burst requests
   }
 
   tags = var.tags
@@ -205,7 +205,7 @@ resource "aws_api_gateway_stage" "contact_stage" {
   stage_name    = var.stage_name
 
   cache_cluster_enabled = true
-  cache_cluster_size   = "0.5"
+  cache_cluster_size    = "0.5"
 
   variables = {
     "cacheEnabled" = "true"
@@ -217,18 +217,18 @@ resource "aws_api_gateway_stage" "contact_stage" {
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
     format = jsonencode({
-      requestId               = "$context.requestId",
-      ip                      = "$context.identity.sourceIp",
-      caller                  = "$context.identity.caller",
-      user                    = "$context.identity.user",
-      requestTime             = "$context.requestTime",
-      httpMethod              = "$context.httpMethod",
-      resourcePath            = "$context.resourcePath",
-      status                  = "$context.status",
-      protocol                = "$context.protocol",
-      responseLength          = "$context.responseLength",
-      integrationStatus       = "$context.integration.status",
-      integrationError        = "$context.integrationErrorMessage"
+      requestId         = "$context.requestId",
+      ip                = "$context.identity.sourceIp",
+      caller            = "$context.identity.caller",
+      user              = "$context.identity.user",
+      requestTime       = "$context.requestTime",
+      httpMethod        = "$context.httpMethod",
+      resourcePath      = "$context.resourcePath",
+      status            = "$context.status",
+      protocol          = "$context.protocol",
+      responseLength    = "$context.responseLength",
+      integrationStatus = "$context.integration.status",
+      integrationError  = "$context.integrationErrorMessage"
     })
   }
 }
@@ -240,11 +240,11 @@ resource "aws_api_gateway_method_settings" "contact_cache" {
   method_path = "*/*"
 
   settings {
-    metrics_enabled        = true
-    logging_level         = "INFO"
+    metrics_enabled      = true
+    logging_level        = "INFO"
     caching_enabled      = true
-    cache_ttl_in_seconds = 300  # 5 minutes cache
-    
+    cache_ttl_in_seconds = 300 # 5 minutes cache
+
     throttling_burst_limit = 100
     throttling_rate_limit  = 50
   }

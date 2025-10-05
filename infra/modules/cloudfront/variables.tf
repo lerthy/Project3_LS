@@ -11,7 +11,7 @@ variable "s3_bucket_name" {
 variable "price_class" {
   description = "CloudFront price class for cost optimization"
   type        = string
-  default     = "PriceClass_100"  # US, Canada, Europe only
+  default     = "PriceClass_100" # US, Canada, Europe only
 }
 
 variable "log_retention_days" {

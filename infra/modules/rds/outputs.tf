@@ -50,6 +50,6 @@ output "dms_task_id" {
 }
 
 output "dms_task_arn" {
-  description = "DMS replication task ARN"  
+  description = "DMS replication task ARN"
   value       = var.environment == "production" && length(aws_dms_replication_task.rds_to_standby) > 0 ? aws_dms_replication_task.rds_to_standby[0].replication_task_arn : ""
 }

@@ -4,7 +4,7 @@
 # SNS Topic for disaster recovery notifications
 resource "aws_sns_topic" "disaster_recovery" {
   name = "disaster-recovery-${var.environment}"
-  
+
   tags = merge(var.tags, {
     Name = "disaster-recovery-notifications"
     Type = "disaster-recovery"
@@ -112,25 +112,25 @@ resource "aws_iam_role_policy_attachment" "dr_lambda_policy_attachment" {
 resource "aws_lambda_function" "disaster_recovery_orchestrator" {
   filename         = "${path.module}/disaster_recovery.zip"
   function_name    = "disaster-recovery-orchestrator-${var.environment}"
-  role            = aws_iam_role.dr_lambda_role.arn
-  handler         = "disaster_recovery.lambda_handler"
-  runtime         = "python3.9"
-  timeout         = 900  # 15 minutes
-  memory_size     = 512
+  role             = aws_iam_role.dr_lambda_role.arn
+  handler          = "disaster_recovery.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 900 # 15 minutes
+  memory_size      = 512
   source_code_hash = filebase64sha256("${path.module}/disaster_recovery.zip")
 
   environment {
     variables = {
-      ENVIRONMENT               = var.environment
-      PRIMARY_REGION           = var.primary_region
-      STANDBY_REGION           = var.standby_region
-      PRIMARY_RDS_IDENTIFIER   = var.primary_rds_identifier
-      STANDBY_RDS_IDENTIFIER   = var.standby_rds_identifier
-      ROUTE53_ZONE_ID         = var.route53_zone_id
-      ROUTE53_RECORD_NAME     = var.route53_record_name
-      SNS_TOPIC_ARN           = aws_sns_topic.disaster_recovery.arn
-      PRIMARY_LAMBDA_NAME     = var.primary_lambda_name
-      STANDBY_LAMBDA_NAME     = var.standby_lambda_name
+      ENVIRONMENT            = var.environment
+      PRIMARY_REGION         = var.primary_region
+      STANDBY_REGION         = var.standby_region
+      PRIMARY_RDS_IDENTIFIER = var.primary_rds_identifier
+      STANDBY_RDS_IDENTIFIER = var.standby_rds_identifier
+      ROUTE53_ZONE_ID        = var.route53_zone_id
+      ROUTE53_RECORD_NAME    = var.route53_record_name
+      SNS_TOPIC_ARN          = aws_sns_topic.disaster_recovery.arn
+      PRIMARY_LAMBDA_NAME    = var.primary_lambda_name
+      STANDBY_LAMBDA_NAME    = var.standby_lambda_name
     }
   }
 
@@ -153,7 +153,7 @@ resource "aws_cloudwatch_event_rule" "primary_region_failure" {
     source      = ["aws.route53"]
     detail-type = ["Route 53 Health Check Failure"]
     detail = {
-      status = ["FAILURE"]
+      status          = ["FAILURE"]
       health-check-id = [var.primary_health_check_id]
     }
   })

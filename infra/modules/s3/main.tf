@@ -54,12 +54,12 @@ resource "aws_s3_bucket_policy" "website_cloudfront_read" {
     Version = "2012-10-17",
     Statement = [
       {
-        Sid       = "CloudFrontReadGetObject",
-        Effect    = "Allow",
+        Sid    = "CloudFrontReadGetObject",
+        Effect = "Allow",
         Principal = {
           AWS = "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${var.cloudfront_oai_id}"
         },
-        Action    = ["s3:GetObject"],
+        Action = ["s3:GetObject"],
         Resource = [
           "${aws_s3_bucket.website.arn}/*"
         ]
@@ -93,7 +93,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
       sse_algorithm     = "aws:kms"
       kms_master_key_id = aws_kms_key.s3_codepipeline_encryption.arn
     }
-    bucket_key_enabled = true  # Cost optimization for KMS
+    bucket_key_enabled = true # Cost optimization for KMS
   }
 }
 
@@ -106,7 +106,7 @@ resource "aws_s3_bucket_intelligent_tiering_configuration" "website_tiering" {
     access_tier = "ARCHIVE_ACCESS"
     days        = 90
   }
-  
+
   tiering {
     access_tier = "DEEP_ARCHIVE_ACCESS"
     days        = 180
@@ -115,7 +115,7 @@ resource "aws_s3_bucket_intelligent_tiering_configuration" "website_tiering" {
 
 resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
   bucket = aws_s3_bucket.website.id
-  
+
   rule {
     id     = "cleanup_old_versions"
     status = "Enabled"
@@ -154,7 +154,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "website_lifecycle" {
 # Add lifecycle for artifacts bucket too
 resource "aws_s3_bucket_lifecycle_configuration" "artifacts_lifecycle" {
   bucket = aws_s3_bucket.codepipeline_artifacts.id
-  
+
   rule {
     id     = "cleanup_artifacts"
     status = "Enabled"
@@ -162,13 +162,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts_lifecycle" {
       prefix = ""
     }
     noncurrent_version_expiration {
-      noncurrent_days = 7  # Shorter retention for CI/CD artifacts
+      noncurrent_days = 7 # Shorter retention for CI/CD artifacts
     }
     abort_incomplete_multipart_upload {
       days_after_initiation = 1
     }
     expiration {
-      days = 90  # Delete old artifacts after 90 days
+      days = 90 # Delete old artifacts after 90 days
     }
   }
 }
@@ -176,21 +176,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts_lifecycle" {
 # Upload website files to S3 bucket
 locals {
   web_root = "${path.root}/../web/static"
-  
+
   website_files = {
-    "index.html"    = "${local.web_root}/index.html"
-    "contact.html"  = "${local.web_root}/contact.html"
-    "style.css"     = "${local.web_root}/style.css"
+    "index.html"   = "${local.web_root}/index.html"
+    "contact.html" = "${local.web_root}/contact.html"
+    "style.css"    = "${local.web_root}/style.css"
   }
-  
+
   js_files = {
     "js/config.js"  = "${local.web_root}/js/config.js"
     "js/contact.js" = "${local.web_root}/js/contact.js"
   }
-  
+
   # Get all asset files dynamically
   asset_files = {
-    for file in fileset("${local.web_root}/assets", "**") : 
+    for file in fileset("${local.web_root}/assets", "**") :
     "assets/${file}" => "${local.web_root}/assets/${file}"
   }
 }
@@ -198,20 +198,20 @@ locals {
 # Helper function to determine MIME type
 locals {
   mime_types = {
-    ".html" = "text/html"
-    ".css"  = "text/css"
-    ".js"   = "application/javascript"
-    ".ttf"  = "font/ttf"
-    ".woff" = "font/woff"
+    ".html"  = "text/html"
+    ".css"   = "text/css"
+    ".js"    = "application/javascript"
+    ".ttf"   = "font/ttf"
+    ".woff"  = "font/woff"
     ".woff2" = "font/woff2"
-    ".eot"  = "application/vnd.ms-fontobject"
-    ".svg"  = "image/svg+xml"
+    ".eot"   = "application/vnd.ms-fontobject"
+    ".svg"   = "image/svg+xml"
   }
 }
 
 resource "aws_s3_object" "website_files" {
   for_each = local.website_files
-  
+
   bucket       = aws_s3_bucket.website.id
   key          = each.key
   source       = each.value
@@ -224,15 +224,15 @@ resource "aws_s3_object" "config_js" {
   bucket       = aws_s3_bucket.website.id
   key          = "js/config.js"
   content_type = "application/javascript"
-  
+
   content = templatefile("${path.module}/templates/config.js.tpl", {
     api_gateway_url = var.api_gateway_url
-    api_key        = var.api_key
+    api_key         = var.api_key
   })
-  
+
   etag = md5(templatefile("${path.module}/templates/config.js.tpl", {
     api_gateway_url = var.api_gateway_url
-    api_key        = var.api_key
+    api_key         = var.api_key
   }))
 }
 
@@ -241,7 +241,7 @@ resource "aws_s3_object" "js_files" {
   for_each = {
     for k, v in local.js_files : k => v if k != "js/config.js"
   }
-  
+
   bucket       = aws_s3_bucket.website.id
   key          = each.key
   source       = each.value
@@ -251,7 +251,7 @@ resource "aws_s3_object" "js_files" {
 
 resource "aws_s3_object" "asset_files" {
   for_each = local.asset_files
-  
+
   bucket       = aws_s3_bucket.website.id
   key          = each.key
   source       = each.value

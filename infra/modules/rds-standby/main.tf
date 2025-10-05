@@ -16,11 +16,11 @@ resource "aws_security_group" "rds_ingress_standby" {
   vpc_id      = data.aws_vpc.standby.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    cidr_blocks     = ["0.0.0.0/0"] # Adjust to match your security requirements
-    description     = "Allow Postgres from Lambda security group"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Adjust to match your security requirements
+    description = "Allow Postgres from Lambda security group"
   }
 
   egress {
@@ -49,14 +49,14 @@ resource "aws_db_instance" "contact_db_standby" {
   # Example (not implemented):
   # resource "aws_dms_replication_task" "rds_to_standby" { ... }
   # AWS RDS automated backups minimum is 1 day. For 15-min backups, consider Aurora or custom automation.
-  storage_encrypted       = true
-  publicly_accessible     = false
-  deletion_protection     = true
-  username                = var.db_username
-  password                = var.db_password
-  db_name                 = var.db_name
-  vpc_security_group_ids  = [aws_security_group.rds_ingress_standby.id]
-  skip_final_snapshot     = true
+  storage_encrypted        = true
+  publicly_accessible      = false
+  deletion_protection      = true
+  username                 = var.db_username
+  password                 = var.db_password
+  db_name                  = var.db_name
+  vpc_security_group_ids   = [aws_security_group.rds_ingress_standby.id]
+  skip_final_snapshot      = true
   delete_automated_backups = false
-  tags = merge(var.tags, { Name = var.db_identifier })
+  tags                     = merge(var.tags, { Name = var.db_identifier })
 }

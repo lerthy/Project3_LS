@@ -2,7 +2,7 @@
 resource "aws_codestarconnections_connection" "github" {
   name          = "github-connection-project3"
   provider_type = "GitHub"
-  
+
   tags = var.tags
 }
 
@@ -11,11 +11,28 @@ data "aws_secretsmanager_secret_version" "github_token" {
   secret_id = "project3/github-webhook"
 }
 
+# SNS Topic for Manual Approvals
+resource "aws_sns_topic" "manual_approval" {
+  name = "cicd-manual-approval-${var.environment}"
+
+  tags = merge(var.tags, {
+    Name = "manual-approval-${var.environment}"
+    Type = "operational-excellence"
+  })
+}
+
+resource "aws_sns_topic_subscription" "manual_approval_email" {
+  count     = var.approval_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.manual_approval.arn
+  protocol  = "email"
+  endpoint  = var.approval_email
+}
+
 # CodeBuild Projects
 resource "aws_codebuild_project" "infra_build" {
-  name          = var.infra_build_project_name
-  description   = "Build and deploy infrastructure with Terraform"
-  service_role  = var.codebuild_role_arn
+  name         = var.infra_build_project_name
+  description  = "Build and deploy infrastructure with Terraform"
+  service_role = var.codebuild_role_arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -23,10 +40,10 @@ resource "aws_codebuild_project" "infra_build" {
 
   environment {
     compute_type                = "BUILD_GENERAL1_MEDIUM"
-    image                      = "aws/codebuild/standard:7.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/standard:7.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    privileged_mode            = true
+    privileged_mode             = true
 
     environment_variable {
       name  = "AWS_DEFAULT_REGION"
@@ -43,7 +60,7 @@ resource "aws_codebuild_project" "infra_build" {
   }
 
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = var.infra_buildspec_path
   }
 
@@ -51,9 +68,9 @@ resource "aws_codebuild_project" "infra_build" {
 }
 
 resource "aws_codebuild_project" "web_build" {
-  name          = var.web_build_project_name
-  description   = "Build and deploy web application"
-  service_role  = var.codebuild_role_arn
+  name         = var.web_build_project_name
+  description  = "Build and deploy web application"
+  service_role = var.codebuild_role_arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -61,10 +78,10 @@ resource "aws_codebuild_project" "web_build" {
 
   environment {
     compute_type                = "BUILD_GENERAL1_MEDIUM"
-    image                      = "aws/codebuild/standard:7.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/standard:7.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    privileged_mode            = true
+    privileged_mode             = true
 
     environment_variable {
       name  = "AWS_DEFAULT_REGION"
@@ -77,7 +94,7 @@ resource "aws_codebuild_project" "web_build" {
   }
 
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = var.web_buildspec_path
   }
 
@@ -108,7 +125,7 @@ resource "aws_codepipeline" "infra_pipeline" {
       configuration = {
         ConnectionArn        = aws_codestarconnections_connection.github.arn
         FullRepositoryId     = var.repository_id
-        BranchName          = var.branch_name
+        BranchName           = var.branch_name
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -118,15 +135,62 @@ resource "aws_codepipeline" "infra_pipeline" {
     name = "Build"
 
     action {
-      name            = "Build"
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.infra_build.name
+      }
+    }
+  }
+
+  # Manual Approval Stage for Production Infrastructure Changes
+  dynamic "stage" {
+    for_each = var.environment == "production" ? [1] : []
+
+    content {
+      name = "ManualApproval"
+
+      action {
+        name     = "ManualApprovalForProduction"
+        category = "Approval"
+        owner    = "AWS"
+        provider = "Manual"
+        version  = "1"
+
+        configuration = {
+          NotificationArn = aws_sns_topic.manual_approval.arn
+          CustomData      = "Please review the infrastructure changes for ${var.environment} environment before proceeding with deployment."
+        }
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+
+    action {
+      name            = "Deploy"
       category        = "Build"
       owner           = "AWS"
       provider        = "CodeBuild"
-      input_artifacts = ["source_output"]
+      input_artifacts = ["build_output"]
       version         = "1"
 
       configuration = {
         ProjectName = aws_codebuild_project.infra_build.name
+        EnvironmentVariables = jsonencode([
+          {
+            name  = "DEPLOYMENT_STAGE"
+            value = "DEPLOY"
+            type  = "PLAINTEXT"
+          }
+        ])
       }
     }
   }
@@ -156,7 +220,7 @@ resource "aws_codepipeline" "web_pipeline" {
       configuration = {
         ConnectionArn        = aws_codestarconnections_connection.github.arn
         FullRepositoryId     = var.repository_id
-        BranchName          = var.branch_name
+        BranchName           = var.branch_name
         OutputArtifactFormat = "CODE_ZIP"
       }
     }
@@ -166,15 +230,62 @@ resource "aws_codepipeline" "web_pipeline" {
     name = "Build"
 
     action {
-      name            = "Build"
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.web_build.name
+      }
+    }
+  }
+
+  # Manual Approval Stage for Production Web Application Changes
+  dynamic "stage" {
+    for_each = var.environment == "production" ? [1] : []
+
+    content {
+      name = "ManualApproval"
+
+      action {
+        name     = "ManualApprovalForWebProduction"
+        category = "Approval"
+        owner    = "AWS"
+        provider = "Manual"
+        version  = "1"
+
+        configuration = {
+          NotificationArn = aws_sns_topic.manual_approval.arn
+          CustomData      = "Please review the web application changes for ${var.environment} environment before proceeding with deployment."
+        }
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+
+    action {
+      name            = "Deploy"
       category        = "Build"
       owner           = "AWS"
       provider        = "CodeBuild"
-      input_artifacts = ["source_output"]
+      input_artifacts = ["build_output"]
       version         = "1"
 
       configuration = {
         ProjectName = aws_codebuild_project.web_build.name
+        EnvironmentVariables = jsonencode([
+          {
+            name  = "DEPLOYMENT_STAGE"
+            value = "DEPLOY"
+            type  = "PLAINTEXT"
+          }
+        ])
       }
     }
   }

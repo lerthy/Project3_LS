@@ -48,7 +48,7 @@ resource "aws_security_group" "rds_replica" {
 
 # RDS read replica in standby region
 resource "aws_db_instance" "replica" {
-  provider                = aws.standby
+  provider               = aws.standby
   identifier             = "${var.db_identifier}-replica"
   replicate_source_db    = var.source_db_arn
   instance_class         = var.instance_class
@@ -56,16 +56,16 @@ resource "aws_db_instance" "replica" {
 
   auto_minor_version_upgrade = true
   backup_retention_period    = var.backup_retention_period
-  multi_az                  = false  # Cost optimization for replica
-  storage_encrypted         = true
+  multi_az                   = false # Cost optimization for replica
+  storage_encrypted          = true
 
   monitoring_interval = var.monitoring_interval
   monitoring_role_arn = var.monitoring_role_arn
 
-  deletion_protection = true  # Prevent accidental deletion
+  deletion_protection = true # Prevent accidental deletion
 
   lifecycle {
-    prevent_destroy = true  # Protect against accidental destruction
+    prevent_destroy = true # Protect against accidental destruction
   }
 
   tags = merge(local.common_tags, {
@@ -85,7 +85,7 @@ resource "aws_cloudwatch_metric_alarm" "replica_lag" {
   namespace           = "AWS/RDS"
   period              = "60"
   statistic           = "Average"
-  threshold           = "300"  # 5 minutes
+  threshold           = "300" # 5 minutes
   alarm_description   = "Replica lag is too high"
   alarm_actions       = var.alarm_actions
 
@@ -96,9 +96,9 @@ resource "aws_cloudwatch_metric_alarm" "replica_lag" {
 
 # CloudWatch dashboard for replica monitoring
 resource "aws_cloudwatch_dashboard" "replica" {
-  provider          = aws.standby
-  dashboard_name    = "${var.db_identifier}-replica-dashboard"
-  dashboard_body    = jsonencode({
+  provider       = aws.standby
+  dashboard_name = "${var.db_identifier}-replica-dashboard"
+  dashboard_body = jsonencode({
     widgets = [
       {
         type   = "metric"

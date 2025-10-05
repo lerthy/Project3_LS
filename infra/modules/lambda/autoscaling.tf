@@ -5,7 +5,7 @@ resource "aws_appautoscaling_target" "lambda_target" {
   resource_id        = "function:${aws_lambda_function.contact.function_name}:${aws_lambda_alias.contact_live.name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
-  
+
   depends_on = [aws_lambda_alias.contact_live]
 }
 
@@ -51,7 +51,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   namespace           = "AWS/Lambda"
   period              = "300"
   statistic           = "Average"
-  threshold           = "10000"  # 10 seconds
+  threshold           = "10000" # 10 seconds
   alarm_description   = "This metric monitors lambda function duration"
   alarm_actions       = var.alarm_actions
 

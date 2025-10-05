@@ -4,7 +4,7 @@
 # SNS Topic for backup notifications
 resource "aws_sns_topic" "backup_notifications" {
   name = "backup-notifications-${var.environment}"
-  
+
   tags = merge(var.tags, {
     Name = "backup-notifications"
     Type = "rpo-enhancement"
@@ -119,24 +119,24 @@ resource "aws_iam_role_policy_attachment" "backup_lambda_policy_attachment" {
 resource "aws_lambda_function" "hourly_backup_orchestrator" {
   filename         = "${path.module}/hourly_backup.zip"
   function_name    = "hourly-backup-orchestrator-${var.environment}"
-  role            = aws_iam_role.backup_lambda_role.arn
-  handler         = "hourly_backup.lambda_handler"
-  runtime         = "python3.9"
-  timeout         = 900  # 15 minutes
-  memory_size     = 256
+  role             = aws_iam_role.backup_lambda_role.arn
+  handler          = "hourly_backup.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 900 # 15 minutes
+  memory_size      = 256
   source_code_hash = filebase64sha256("${path.module}/hourly_backup.zip")
 
   environment {
     variables = {
-      ENVIRONMENT              = var.environment
-      PRIMARY_RDS_IDENTIFIER   = var.primary_rds_identifier
-      STANDBY_RDS_IDENTIFIER   = var.standby_rds_identifier
-      PRIMARY_REGION           = var.primary_region
-      STANDBY_REGION           = var.standby_region
-      BACKUP_RETENTION_HOURS   = var.backup_retention_hours
-      SNS_TOPIC_ARN           = aws_sns_topic.backup_notifications.arn
-      BACKUP_BUCKET_NAME      = var.backup_bucket_name
-      DMS_TASK_ARN            = var.dms_task_arn
+      ENVIRONMENT            = var.environment
+      PRIMARY_RDS_IDENTIFIER = var.primary_rds_identifier
+      STANDBY_RDS_IDENTIFIER = var.standby_rds_identifier
+      PRIMARY_REGION         = var.primary_region
+      STANDBY_REGION         = var.standby_region
+      BACKUP_RETENTION_HOURS = var.backup_retention_hours
+      SNS_TOPIC_ARN          = aws_sns_topic.backup_notifications.arn
+      BACKUP_BUCKET_NAME     = var.backup_bucket_name
+      DMS_TASK_ARN           = var.dms_task_arn
     }
   }
 
@@ -154,7 +154,7 @@ resource "aws_lambda_function" "hourly_backup_orchestrator" {
 resource "aws_cloudwatch_event_rule" "hourly_backup_schedule" {
   name                = "hourly-backup-schedule-${var.environment}"
   description         = "Triggers hourly RDS snapshots for 1-hour RPO"
-  schedule_expression = "rate(1 hour)"  # Every hour
+  schedule_expression = "rate(1 hour)" # Every hour
   state               = var.environment == "production" ? "ENABLED" : "DISABLED"
 
   tags = var.tags
@@ -185,7 +185,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_backup_events" {
 resource "aws_cloudwatch_event_rule" "backup_cleanup_schedule" {
   name                = "backup-cleanup-schedule-${var.environment}"
   description         = "Daily cleanup of old hourly backups"
-  schedule_expression = "cron(0 2 * * ? *)"  # 2 AM daily
+  schedule_expression = "cron(0 2 * * ? *)" # 2 AM daily
 
   tags = var.tags
 }
@@ -218,7 +218,7 @@ resource "aws_cloudwatch_metric_alarm" "backup_failures" {
   evaluation_periods  = 1
   metric_name         = "Errors"
   namespace           = "AWS/Lambda"
-  period              = 3600  # 1 hour
+  period              = 3600 # 1 hour
   statistic           = "Sum"
   threshold           = 0
   alarm_description   = "Hourly backup Lambda function has errors"
@@ -239,7 +239,7 @@ resource "aws_cloudwatch_metric_alarm" "missing_backups" {
   evaluation_periods  = 1
   metric_name         = "HourlyBackupSuccess"
   namespace           = "Project3/RPO"
-  period              = 7200  # 2 hours
+  period              = 7200 # 2 hours
   statistic           = "Sum"
   threshold           = 1
   alarm_description   = "No successful hourly backups in the last 2 hours"
@@ -257,9 +257,9 @@ resource "aws_cloudwatch_metric_alarm" "dms_replication_lag" {
   evaluation_periods  = 2
   metric_name         = "CDCLatencyTarget"
   namespace           = "AWS/DMS"
-  period              = 300  # 5 minutes
+  period              = 300 # 5 minutes
   statistic           = "Average"
-  threshold           = 3600  # 1 hour in seconds
+  threshold           = 3600 # 1 hour in seconds
   alarm_description   = "DMS replication lag exceeds 1 hour RPO target"
   alarm_actions       = [aws_sns_topic.backup_notifications.arn]
 
@@ -339,7 +339,7 @@ resource "aws_cloudwatch_dashboard" "rpo_monitoring" {
             ["AWS/Lambda", "Duration", "FunctionName", aws_lambda_function.hourly_backup_orchestrator.function_name],
             ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.hourly_backup_orchestrator.function_name]
           ]
-          period = 3600  # 1 hour
+          period = 3600 # 1 hour
           stat   = "Sum"
           region = var.primary_region
           title  = "Hourly Backup Performance"

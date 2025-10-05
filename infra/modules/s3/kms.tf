@@ -9,7 +9,7 @@ data "aws_caller_identity" "current" {}
 # KMS Key for S3 Website Bucket Encryption
 resource "aws_kms_key" "s3_website_encryption" {
   description = "KMS key for S3 website bucket encryption"
-  
+
   # Key policy allowing root account and S3 service access
   policy = jsonencode({
     Version = "2012-10-17"
@@ -76,10 +76,10 @@ resource "aws_kms_key" "s3_website_encryption" {
 
   # Tags for resource management
   tags = {
-    Name = "project3-s3-website-kms-key"
+    Name        = "project3-s3-website-kms-key"
     Environment = "dev"
-    Project = "project3"
-    CreatedBy = "terraform"
+    Project     = "project3"
+    CreatedBy   = "terraform"
   }
 }
 
@@ -92,7 +92,7 @@ resource "aws_kms_alias" "s3_website_encryption" {
 # KMS Key for S3 CodePipeline Bucket Encryption
 resource "aws_kms_key" "s3_codepipeline_encryption" {
   description = "KMS key for S3 CodePipeline bucket encryption"
-  
+
   # Key policy allowing root account and CodePipeline/S3 service access
   policy = jsonencode({
     Version = "2012-10-17"
@@ -189,10 +189,10 @@ resource "aws_kms_key" "s3_codepipeline_encryption" {
 
   # Tags for resource management
   tags = {
-    Name = "project3-s3-codepipeline-kms-key"
+    Name        = "project3-s3-codepipeline-kms-key"
     Environment = "dev"
-    Project = "project3"
-    CreatedBy = "terraform"
+    Project     = "project3"
+    CreatedBy   = "terraform"
   }
 }
 

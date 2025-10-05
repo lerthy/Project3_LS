@@ -52,7 +52,7 @@ variable "standby_rds_id" {
 variable "primary_region" {
   description = "Primary AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-north-1"
 }
 
 variable "standby_region" {

@@ -21,8 +21,8 @@ output "start_schedule_rule_arn" {
 output "cost_savings_estimate" {
   description = "Estimated daily cost savings from resource scheduling"
   value = var.environment != "production" ? {
-    rds_daily_savings = "$2-10 (12 hours off-time)"
-    lambda_daily_savings = "$1-3 (provisioned concurrency removed)"
+    rds_daily_savings      = "$2-10 (12 hours off-time)"
+    lambda_daily_savings   = "$1-3 (provisioned concurrency removed)"
     total_monthly_estimate = "$90-390 (business hours only)"
   } : null
 }

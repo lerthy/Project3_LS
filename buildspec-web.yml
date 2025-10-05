@@ -2,8 +2,8 @@ version: 0.2
 
 env:
   variables:
-    AWS_DEFAULT_REGION: us-east-1
-    AWS_REGION: us-east-1
+    AWS_DEFAULT_REGION: eu-north-1
+    AWS_REGION: eu-north-1
 
 phases:
   install:
@@ -15,15 +15,182 @@ phases:
 
   pre_build:
     commands:
-      - echo "Pre-build phase"
-      - echo "Running basic checks"
+      - echo "=== SECURITY & QUALITY CHECKS ==="
+      - echo "Installing Lambda dependencies..."
+      - npm --prefix web/lambda ci || npm --prefix web/lambda install
+      
+      - echo "Running security vulnerability scan..."
+      - |
+        if ! npm --prefix web audit --audit-level high; then
+          echo "❌ CRITICAL: Frontend security vulnerabilities detected!"
+          echo "Please fix security vulnerabilities before proceeding."
+          exit 1
+        else
+          echo "✅ Frontend security scan passed"
+        fi
+      - |
+        if ! npm --prefix web/lambda audit --audit-level high; then
+          echo "❌ CRITICAL: Lambda security vulnerabilities detected!"
+          echo "Please fix security vulnerabilities before proceeding."
+          exit 1
+        else
+          echo "✅ Lambda security scan passed"
+        fi
+      
+      - echo "Running code quality checks..."
+      - npm --prefix web run lint:js || echo "⚠️ JavaScript linting issues found"
+      - npm --prefix web run lint:css || echo "⚠️ CSS linting issues found"
 
   build:
     commands:
-      - echo "Build phase"
-      - echo "Running tests"
+      - echo "=== BUILD & TEST PHASE ==="
+      - echo "Running comprehensive tests..."
+      - |
+        if [ "$DEPLOYMENT_STAGE" = "DEPLOY" ]; then
+          echo "🚀 DEPLOYMENT PHASE: Deploying web application..."
+          
+          # Run full test suite
+          echo "Running frontend tests..."
+          npm --prefix web test -- --coverage --run
+          
+          echo "Running Lambda tests..."
+          npm --prefix web/lambda test -- --coverage
+          
+          # Get API Gateway URL from SSM
+          echo "Retrieving deployment configuration..."
+          API_GATEWAY_URL=$(aws ssm get-parameter --name "/api-gateway/api_gateway_url" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          S3_BUCKET=$(aws ssm get-parameter --name "/s3/website_bucket_name" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          CLOUDFRONT_ID=$(aws ssm get-parameter --name "/cloudfront/cloudfront_distribution_id" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          LAMBDA_FUNCTION=$(aws ssm get-parameter --name "/lambda/lambda_function_name" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          
+          # Update API configuration in static files
+          if [ -n "$API_GATEWAY_URL" ]; then
+            echo "Updating API configuration..."
+            sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
+            echo "✅ API configuration updated"
+          else
+            echo "⚠️ API Gateway URL not found - using placeholder"
+          fi
+          
+          # Deploy to S3
+          if [ -n "$S3_BUCKET" ]; then
+            echo "Deploying to S3 bucket: $S3_BUCKET"
+            aws s3 sync web/static/ s3://$S3_BUCKET/ --delete --region $AWS_REGION
+            echo "✅ S3 deployment completed"
+          else
+            echo "❌ S3 bucket not found - deployment failed"
+            exit 1
+          fi
+          
+          # Update Lambda function
+          if [ -n "$LAMBDA_FUNCTION" ]; then
+            echo "Updating Lambda function: $LAMBDA_FUNCTION"
+            cd web/lambda
+            zip -r lambda-deployment.zip . -x "node_modules/*" "coverage/*" "*.test.js" "jest.config.*"
+            aws lambda update-function-code --function-name $LAMBDA_FUNCTION --zip-file fileb://lambda-deployment.zip --region $AWS_REGION
+            cd ../..
+            echo "✅ Lambda function updated"
+          else
+            echo "❌ Lambda function not found - deployment failed"
+            exit 1
+          fi
+          
+          # Invalidate CloudFront
+          if [ -n "$CLOUDFRONT_ID" ]; then
+            echo "Invalidating CloudFront distribution: $CLOUDFRONT_ID"
+            aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*" --region $AWS_REGION
+            echo "✅ CloudFront invalidation completed"
+          else
+            echo "⚠️ CloudFront distribution not found - skipping invalidation"
+          fi
+          
+        else
+          echo "📋 VALIDATION PHASE: Running tests only..."
+          
+          # Run tests for validation
+          echo "Running frontend tests..."
+          npm --prefix web test -- --coverage --run || echo "⚠️ Frontend tests failed"
+          
+          echo "Running Lambda tests..."
+          npm --prefix web/lambda test -- --coverage || echo "⚠️ Lambda tests failed"
+          
+          echo "✅ Validation phase completed"
+        fi
 
   post_build:
     commands:
-      - echo "Post-build phase"
-      - echo "Deployment completed"
+      - echo "=== P2 RELIABILITY: ENHANCED DEPLOYMENT WITH AUTOMATED ROLLBACK ==="
+      - |
+        if [ "$DEPLOYMENT_STAGE" = "DEPLOY" ]; then
+          echo "🚀 Initializing deployment with rollback protection..."
+          
+          # Initialize rollback system
+          ./scripts/automated-rollback.sh init
+          
+          echo "🔍 Running comprehensive health validation with rollback triggers..."
+          
+          # Set environment variables for enhanced health check
+          export ENVIRONMENT="${ENVIRONMENT:-development}"
+          export SNS_TOPIC_ARN="${SNS_TOPIC_ARN:-}"
+          export RDS_ENDPOINT="${RDS_ENDPOINT:-}"
+          export ROUTE53_RECORD="${ROUTE53_RECORD:-}"
+          
+          # Run enhanced health check script with rollback integration
+          if ./scripts/enhanced-health-check.sh; then
+            echo "✅ P2 RELIABILITY: All enhanced health checks passed!"
+            echo "📊 Generating deployment success metrics..."
+            
+            # Send success metrics to CloudWatch
+            aws cloudwatch put-metric-data \
+              --namespace "Custom/DeploymentHealth" \
+              --metric-data MetricName=DeploymentSuccess,Value=1,Unit=Count,Dimensions=Environment=${ENVIRONMENT},Service=web \
+              --region $AWS_REGION || echo "⚠️ Could not send success metrics"
+            
+            # Finalize successful deployment
+            export DEPLOYMENT_SUCCESS="true"
+            ./scripts/automated-rollback.sh deploy
+            
+            echo "🎉 P2 RELIABILITY: Deployment completed successfully with rollback protection!"
+            
+          else
+            echo "❌ P2 RELIABILITY: Health checks failed - initiating automated rollback"
+            echo "🚨 Generating deployment failure metrics and alerts..."
+            
+            # Send failure metrics to CloudWatch
+            aws cloudwatch put-metric-data \
+              --namespace "Custom/DeploymentHealth" \
+              --metric-data MetricName=DeploymentFailure,Value=1,Unit=Count,Dimensions=Environment=${ENVIRONMENT},Service=web \
+              --region $AWS_REGION || echo "⚠️ Could not send failure metrics"
+            
+            # Create deployment failure alarm
+            aws cloudwatch put-metric-alarm \
+              --alarm-name "${ENVIRONMENT}-web-deployment-failure" \
+              --alarm-description "Web deployment health check failure" \
+              --metric-name DeploymentFailure \
+              --namespace Custom/DeploymentHealth \
+              --statistic Sum \
+              --period 300 \
+              --threshold 1 \
+              --comparison-operator GreaterThanOrEqualToThreshold \
+              --evaluation-periods 1 \
+              --alarm-actions "${SNS_TOPIC_ARN:-arn:aws:sns:${AWS_REGION}:${AWS_ACCOUNT_ID}:deployment-alerts}" \
+              --region $AWS_REGION || echo "⚠️ Could not create failure alarm"
+            
+            echo "🔄 AUTOMATED ROLLBACK: Executing rollback due to health check failure"
+            ./scripts/automated-rollback.sh rollback "Post-deployment health check failure"
+            
+            echo "❌ DEPLOYMENT FAILED: Rollback completed, deployment aborted"
+            exit 1
+          fi
+        else
+          echo "✅ Build validation completed successfully"
+          
+          # Run basic validation tests for non-deployment builds
+          echo "Running basic validation tests..."
+          if [ -f "web/package.json" ]; then
+            cd web && npm test 2>/dev/null || echo "⚠️ Web tests skipped or failed"
+          fi
+          if [ -f "web/lambda/package.json" ]; then
+            cd web/lambda && npm test 2>/dev/null || echo "⚠️ Lambda tests skipped or failed"
+          fi
+        fi

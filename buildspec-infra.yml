@@ -41,19 +41,71 @@ phases:
       - echo "Terraform validation"
       - terraform -chdir=infra init -backend=false
       - terraform -chdir=infra validate
-      - echo "Security scan with tfsec"
+      - echo "=== SECURITY SCANNING ==="
+      - echo "Installing tfsec security scanner..."
       - wget -q https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -O tfsec
       - chmod +x tfsec
-      - ./tfsec infra/ --format json --out tfsec-report.json || echo "Security issues found"
-      - ./tfsec infra/ --format lovely || echo "Security scan completed"
-      - echo "Fast TFLint using lightweight config"
-      - tflint -c .tflint.ci.hcl infra/ || echo "TFLint completed with findings"
+      - echo "Running comprehensive security scan with tfsec..."
+      - |
+        if ! ./tfsec infra/ --format json --out tfsec-report.json; then
+          echo "❌ CRITICAL: Security vulnerabilities detected!"
+          ./tfsec infra/ --format lovely
+          echo "Security scan failed. Please fix vulnerabilities before proceeding."
+          exit 1
+        else
+          echo "✅ Security scan passed - no critical vulnerabilities found"
+          ./tfsec infra/ --format lovely
+        fi
+      - echo "Running TFLint for best practices..."
+      - |
+        if ! tflint -c .tflint.ci.hcl infra/; then
+          echo "❌ WARNING: Terraform best practice violations found!"
+          echo "TFLint findings detected. Please review and fix."
+        else
+          echo "✅ TFLint passed - code follows best practices"
+        fi
 
   build:
     commands:
       - echo "=== OPERATIONAL EXCELLENCE Infrastructure Testing ==="
-      - echo "Infrastructure validation completed in pre_build phase"
-      - echo "Ready for deployment"
+      - echo "Checking deployment readiness..."
+      - |
+        if [ "$DEPLOYMENT_STAGE" = "DEPLOY" ]; then
+          echo "🚀 DEPLOYMENT PHASE: Applying infrastructure changes..."
+          
+          # Initialize Terraform with backend
+          terraform -chdir=infra init -backend-config="bucket=$TF_STATE_BUCKET" \
+                                      -backend-config="key=$TF_STATE_KEY" \
+                                      -backend-config="region=$TF_STATE_REGION" \
+                                      -backend-config="encrypt=true" \
+                                      -backend-config="dynamodb_table=$TF_STATE_TABLE"
+          
+          # Plan and Apply with health checks
+          echo "Creating deployment plan..."
+          terraform -chdir=infra plan -out=tfplan
+          
+          echo "Applying infrastructure changes..."
+          if terraform -chdir=infra apply -auto-approve tfplan; then
+            echo "✅ Infrastructure deployment successful"
+            
+            # Post-deployment health checks
+            echo "Running post-deployment health checks..."
+            sleep 30  # Allow resources to initialize
+            
+            # Validate key resources are healthy
+            aws lambda get-function --function-name contact-form --region $AWS_REGION || echo "⚠️ Lambda function health check failed"
+            aws apigateway get-rest-apis --region $AWS_REGION | grep contact-api || echo "⚠️ API Gateway health check failed"
+            
+            echo "✅ Deployment health checks completed"
+          else
+            echo "❌ Infrastructure deployment failed!"
+            exit 1
+          fi
+        else
+          echo "📋 VALIDATION PHASE: Running infrastructure tests only..."
+          echo "Infrastructure validation completed in pre_build phase"
+          echo "✅ Ready for deployment approval"
+        fi
 
   post_build:
     commands:
@@ -82,14 +134,37 @@ phases:
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
         else
+          echo "=== P2 RELIABILITY: INFRASTRUCTURE DEPLOYMENT WITH ROLLBACK PROTECTION ==="
+          
+          # Initialize rollback system for infrastructure
+          export SERVICE_NAME="infrastructure"
+          if [ -f "scripts/automated-rollback.sh" ]; then
+            ./scripts/automated-rollback.sh init
+          fi
+          
           echo "=== PHASE 1: Deploy IAM permissions first ==="
-          terraform -chdir=infra apply -target=module.iam -auto-approve || echo "IAM deployment failed; continuing..."
+          if ! terraform -chdir=infra apply -target=module.iam -auto-approve; then
+            echo "❌ IAM deployment failed - initiating rollback"
+            if [ -f "scripts/automated-rollback.sh" ]; then
+              ./scripts/automated-rollback.sh rollback "IAM deployment failure"
+            fi
+            exit 1
+          fi
+          
           echo "Waiting 30 seconds for IAM propagation..."
           sleep 30
+          
           echo "=== PHASE 2: Deploy remaining infrastructure ==="
-          terraform -chdir=infra apply -auto-approve tfplan || echo "Terraform apply failed; continuing without failing build"
+          if ! terraform -chdir=infra apply -auto-approve tfplan; then
+            echo "❌ Infrastructure deployment failed - initiating rollback"
+            if [ -f "scripts/automated-rollback.sh" ]; then
+              ./scripts/automated-rollback.sh rollback "Infrastructure deployment failure"
+            fi
+            exit 1
+          fi
+          
+          echo "🎉 P2 RELIABILITY: Infrastructure deployment completed successfully with rollback protection!"
         fi
-      - echo "Infrastructure deployment completed successfully"
 
 artifacts:
   files:

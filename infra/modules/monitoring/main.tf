@@ -78,10 +78,10 @@ resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
   alarm_actions       = var.alarm_actions
 
   dimensions = {
-    ApiId      = var.api_gateway_id
-    Stage      = var.api_gateway_stage
-    Resource   = "/contact"
-    Method     = "POST"
+    ApiId    = var.api_gateway_id
+    Stage    = var.api_gateway_stage
+    Resource = "/contact"
+    Method   = "POST"
   }
 }
 

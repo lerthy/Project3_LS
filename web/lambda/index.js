@@ -4,7 +4,7 @@ import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-sec
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
 // Initialize AWS clients
-const region = process.env.AWS_REGION || 'us-east-1';
+const region = process.env.AWS_REGION || 'eu-north-1'; // Default to eu-north-1 if not set
 const secretsClient = new SecretsManagerClient({ region });
 const ssmClient = new SSMClient({ region });
 

@@ -22,12 +22,12 @@ import {
 module "primary_vpc" {
   source = "./modules/vpc"
 
-  environment         = "primary"
-  vpc_cidr           = "10.0.0.0/16"
-  public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  environment          = "primary"
+  vpc_cidr             = "10.0.0.0/16"
+  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnet_cidrs = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-  availability_zones = var.primary_availability_zones
-  tags               = local.common_tags
+  availability_zones   = var.primary_availability_zones
+  tags                 = local.common_tags
 }
 
 # VPC Module - Standby Region
@@ -38,12 +38,12 @@ module "standby_vpc" {
     aws = aws.standby
   }
 
-  environment         = "standby"
-  vpc_cidr           = "10.2.0.0/16"
-  public_subnet_cidrs = ["10.2.1.0/24", "10.2.2.0/24", "10.2.3.0/24"]
+  environment          = "standby"
+  vpc_cidr             = "10.2.0.0/16"
+  public_subnet_cidrs  = ["10.2.1.0/24", "10.2.2.0/24", "10.2.3.0/24"]
   private_subnet_cidrs = ["10.2.4.0/24", "10.2.5.0/24", "10.2.6.0/24"]
-  availability_zones = var.standby_availability_zones
-  tags               = local.common_tags
+  availability_zones   = var.standby_availability_zones
+  tags                 = local.common_tags
 }
 
 # S3 Module
@@ -96,70 +96,70 @@ module "rds" {
 # RDS Standby Module (us-west-2)
 module "rds_standby" {
   source = "./modules/rds-standby"
-  
+
   providers = {
     aws = aws.standby
   }
 
-  region             = var.standby_region
-  db_identifier      = "contact-db-standby"
-  db_username        = var.db_username
-  db_password        = var.db_password
-  db_name           = var.db_name
-  instance_class     = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
-  allocated_storage  = 20
+  region                = var.standby_region
+  db_identifier         = "contact-db-standby"
+  db_username           = var.db_username
+  db_password           = var.db_password
+  db_name               = var.db_name
+  instance_class        = var.environment == "production" ? "db.t3.small" : "db.t3.micro"
+  allocated_storage     = 20
   max_allocated_storage = 100
-  tags              = local.common_tags
+  tags                  = local.common_tags
 }
 
 # Lambda Module
 module "lambda" {
   source = "./modules/lambda"
 
-  function_name     = "contact-form"
-  lambda_zip_path   = "lambda.zip"
-  lambda_role_name  = "lambda_exec_role_project3"
-  aws_region        = var.aws_region
-  db_secret_arn     = aws_secretsmanager_secret.db_credentials.arn
+  function_name      = "contact-form"
+  lambda_zip_path    = "lambda.zip"
+  lambda_role_name   = "lambda_exec_role_project3"
+  aws_region         = var.aws_region
+  db_secret_arn      = aws_secretsmanager_secret.db_credentials.arn
   private_subnet_ids = data.aws_subnets.default_vpc_subnets.ids
-  tags              = local.common_tags
+  tags               = local.common_tags
 }
 
 # Lambda Standby Module (us-west-2)
 module "lambda_standby" {
   source = "./modules/lambda-standby"
-  
+
   providers = {
     aws = aws.standby
   }
 
   function_name      = "contact-form-standby"
   lambda_role_arn    = module.lambda.lambda_role_arn
-  vpc_id            = module.standby_vpc.vpc_id
+  vpc_id             = module.standby_vpc.vpc_id
   private_subnet_ids = module.standby_vpc.private_subnet_ids
-  db_secret_arn     = aws_secretsmanager_secret.db_credentials_standby.arn
-  environment       = var.environment
-  region            = var.standby_region
-  lambda_zip_path   = "lambda.zip"
-  tags              = local.common_tags
+  db_secret_arn      = aws_secretsmanager_secret.db_credentials_standby.arn
+  environment        = var.environment
+  region             = var.standby_region
+  lambda_zip_path    = "lambda.zip"
+  tags               = local.common_tags
 }
 
 # API Gateway Module
 module "api_gateway" {
   source = "./modules/api-gateway"
 
-  api_name            = "contact-api"
-  stage_name          = "dev"
-  lambda_invoke_arn   = module.lambda.lambda_invoke_arn
-  aws_region          = var.aws_region
-  log_retention_days  = var.environment == "production" ? 90 : 7
-  tags                = local.common_tags
+  api_name           = "contact-api"
+  stage_name         = "dev"
+  lambda_invoke_arn  = module.lambda.lambda_invoke_arn
+  aws_region         = var.aws_region
+  log_retention_days = var.environment == "production" ? 90 : 7
+  tags               = local.common_tags
 }
 
 # API Gateway Standby Module (us-west-2)
 module "api_gateway_standby" {
   source = "./modules/api-gateway-standby"
-  
+
   providers = {
     aws = aws.standby
   }
@@ -175,12 +175,12 @@ module "route53" {
   source = "./modules/route53"
   count  = var.route53_zone_id != "" ? 1 : 0
 
-  primary_api_dns   = module.api_gateway.api_gateway_url
-  standby_api_dns   = module.api_gateway_standby.api_endpoint
-  primary_api_ip    = "1.2.3.4"  # Placeholder - would be resolved from API Gateway
-  standby_api_ip    = "5.6.7.8"  # Placeholder - would be resolved from API Gateway
-  route53_zone_id   = var.route53_zone_id
-  tags              = local.common_tags
+  primary_api_dns = module.api_gateway.api_gateway_url
+  standby_api_dns = module.api_gateway_standby.api_endpoint
+  primary_api_ip  = "1.2.3.4" # Placeholder - would be resolved from API Gateway
+  standby_api_ip  = "5.6.7.8" # Placeholder - would be resolved from API Gateway
+  route53_zone_id = var.route53_zone_id
+  tags            = local.common_tags
 }
 
 # Lambda permission for API Gateway (created after both modules)
@@ -196,15 +196,15 @@ resource "aws_lambda_permission" "apigw_invoke" {
 module "iam" {
   source = "./modules/iam"
 
-  codepipeline_role_name        = "codepipeline-role-project3"
-  codebuild_role_name          = "codebuild-role-project3"
-  artifacts_bucket_arn         = module.s3.codepipeline_artifacts_bucket_arn
-  website_bucket_arn           = module.s3.website_bucket_arn
-  codestar_connection_arn      = var.codestar_connection_arn
-  aws_region                   = var.aws_region
-  lambda_function_arn          = module.lambda.lambda_function_arn
-  cloudfront_distribution_id   = module.cloudfront.cloudfront_distribution_id
-  tags                         = local.common_tags
+  codepipeline_role_name     = "codepipeline-role-project3"
+  codebuild_role_name        = "codebuild-role-project3"
+  artifacts_bucket_arn       = module.s3.codepipeline_artifacts_bucket_arn
+  website_bucket_arn         = module.s3.website_bucket_arn
+  codestar_connection_arn    = var.codestar_connection_arn
+  aws_region                 = var.aws_region
+  lambda_function_arn        = module.lambda.lambda_function_arn
+  cloudfront_distribution_id = module.cloudfront.cloudfront_distribution_id
+  tags                       = local.common_tags
 
   depends_on = [module.s3, module.lambda, module.cloudfront]
 }
@@ -220,7 +220,7 @@ module "codepipeline" {
   codebuild_role_arn       = module.iam.codebuild_role_arn
   codepipeline_role_arn    = module.iam.codepipeline_role_arn
   artifacts_bucket_name    = module.s3.artifacts_bucket_name
-  codestar_connection_arn  = ""  # Will be set by the module itself
+  codestar_connection_arn  = "" # Will be set by the module itself
   repository_id            = "lerthy/Project3_LS"
   branch_name              = "project4"
   aws_region               = var.aws_region
@@ -236,52 +236,52 @@ module "codepipeline" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  billing_alarm_name = "billing-alarm-5-usd"
-  billing_threshold  = "5"
-  alarm_actions      = []
+  billing_alarm_name   = "billing-alarm-5-usd"
+  billing_threshold    = "5"
+  alarm_actions        = []
   lambda_function_name = module.lambda.lambda_function_name
   api_gateway_id       = module.api_gateway.api_gateway_id
   api_gateway_stage    = "dev"
-  
+
   # Multi-region monitoring variables
-  primary_rds_id     = module.rds.rds_identifier
-  standby_rds_id     = module.rds_standby.standby_db_identifier
-  primary_region     = var.aws_region
-  standby_region     = var.standby_region
-  primary_lambda_name = module.lambda.lambda_function_name
-  standby_lambda_name = module.lambda_standby.lambda_function_name
-  primary_api_name    = "contact-api"
-  standby_api_name    = "${var.environment}-contact-api"
-  primary_health_check_id  = length(module.route53) > 0 ? module.route53[0].primary_health_check_id : ""
-  standby_health_check_id  = length(module.route53) > 0 ? module.route53[0].standby_health_check_id : ""
-  
-  tags                 = local.common_tags
+  primary_rds_id          = module.rds.rds_identifier
+  standby_rds_id          = module.rds_standby.standby_db_identifier
+  primary_region          = var.aws_region
+  standby_region          = var.standby_region
+  primary_lambda_name     = module.lambda.lambda_function_name
+  standby_lambda_name     = module.lambda_standby.lambda_function_name
+  primary_api_name        = "contact-api"
+  standby_api_name        = "${var.environment}-contact-api"
+  primary_health_check_id = length(module.route53) > 0 ? module.route53[0].primary_health_check_id : ""
+  standby_health_check_id = length(module.route53) > 0 ? module.route53[0].standby_health_check_id : ""
+
+  tags = local.common_tags
 }
 
 # Operational Excellence Module - Comprehensive CI/CD Monitoring and Automation
 module "operational_excellence" {
   source = "./modules/operational-excellence"
 
-  environment              = var.environment
-  notification_email       = var.notification_email
-  approval_email          = var.approval_email
-  
+  environment        = var.environment
+  notification_email = var.notification_email
+  approval_email     = var.approval_email
+
   # Pipeline configuration (matching variables.tf requirements)
-  infra_pipeline_name      = "project3-infra-pipeline"
-  web_pipeline_name        = "project3-web-pipeline"
-  infra_build_project      = "project3-infra-build"
-  web_build_project        = "project3-web-build"
-  
+  infra_pipeline_name = "project3-infra-pipeline"
+  web_pipeline_name   = "project3-web-pipeline"
+  infra_build_project = "project3-infra-build"
+  web_build_project   = "project3-web-build"
+
   # Infrastructure monitoring
-  lambda_function_name     = module.lambda.lambda_function_name
-  api_gateway_name        = "contact-api"
-  
+  lambda_function_name = module.lambda.lambda_function_name
+  api_gateway_name     = "contact-api"
+
   # Terraform state configuration for drift detection
-  terraform_state_bucket  = "terraform-state-project3-fresh"
-  terraform_state_key     = "project3/terraform.tfstate"
-  
+  terraform_state_bucket = "terraform-state-project3-fresh"
+  terraform_state_key    = "project3/terraform.tfstate"
+
   tags = local.common_tags
-  
+
   # Note: Dependencies are implicit through variable references
   # Explicit depends_on removed to avoid circular dependencies
 }
@@ -290,19 +290,19 @@ module "operational_excellence" {
 module "disaster_recovery" {
   source = "./modules/disaster-recovery"
 
-  environment               = var.environment
-  primary_region           = var.aws_region
-  standby_region           = var.standby_region
-  primary_rds_identifier   = module.rds.rds_identifier
-  standby_rds_identifier   = module.rds_standby.standby_db_identifier
+  environment             = var.environment
+  primary_region          = var.aws_region
+  standby_region          = var.standby_region
+  primary_rds_identifier  = module.rds.rds_identifier
+  standby_rds_identifier  = module.rds_standby.standby_db_identifier
   route53_zone_id         = var.route53_zone_id
   primary_health_check_id = length(module.route53) > 0 ? module.route53[0].primary_health_check_id : ""
   primary_lambda_name     = module.lambda.lambda_function_name
   standby_lambda_name     = module.lambda_standby.lambda_function_name
   notification_email      = var.notification_email
-  
+
   tags = local.common_tags
-  
+
   depends_on = [
     module.rds,
     module.rds_standby,
@@ -316,18 +316,18 @@ module "disaster_recovery" {
 module "rpo_enhancement" {
   source = "./modules/rpo-enhancement"
 
-  environment              = var.environment
-  primary_region          = var.aws_region
-  standby_region          = var.standby_region
-  primary_rds_identifier  = module.rds.rds_identifier
-  standby_rds_identifier  = module.rds_standby.standby_db_identifier
-  backup_retention_hours  = var.environment == "production" ? 168 : 72  # 7 days prod, 3 days dev
-  backup_bucket_name      = "project3-rpo-backup-metadata-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  environment            = var.environment
+  primary_region         = var.aws_region
+  standby_region         = var.standby_region
+  primary_rds_identifier = module.rds.rds_identifier
+  standby_rds_identifier = module.rds_standby.standby_db_identifier
+  backup_retention_hours = var.environment == "production" ? 168 : 72 # 7 days prod, 3 days dev
+  backup_bucket_name     = "project3-rpo-backup-metadata-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
   dms_task_arn           = var.environment == "production" ? module.rds.dms_task_arn : ""
   notification_email     = var.notification_email
-  
+
   tags = local.common_tags
-  
+
   depends_on = [
     module.rds,
     module.rds_standby

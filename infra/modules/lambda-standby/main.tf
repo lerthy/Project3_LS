@@ -25,14 +25,14 @@ resource "aws_security_group" "lambda" {
 # Lambda function
 resource "aws_lambda_function" "function" {
   provider = aws.standby
-  
+
   function_name = var.function_name
-  role         = var.lambda_role_arn
-  handler      = "index.handler"
-  runtime      = "nodejs18.x"
-  timeout      = 30
-  memory_size  = 256
-  filename     = var.lambda_zip_path
+  role          = var.lambda_role_arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  timeout       = 30
+  memory_size   = 256
+  filename      = var.lambda_zip_path
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -41,7 +41,7 @@ resource "aws_lambda_function" "function" {
 
   environment {
     variables = {
-      ENVIRONMENT    = var.environment
+      ENVIRONMENT   = var.environment
       DB_SECRET_ARN = var.db_secret_arn
     }
   }
@@ -52,14 +52,14 @@ resource "aws_lambda_function" "function" {
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda" {
   provider = aws.standby
-  
+
   name              = "/aws/lambda/${var.function_name}"
   retention_in_days = 14
 
   tags = var.tags
 
   lifecycle {
-    ignore_changes = [name, retention_in_days, tags]
+    ignore_changes  = [name, retention_in_days, tags]
     prevent_destroy = true
   }
 }
@@ -67,7 +67,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
 # CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "errors" {
   provider = aws.standby
-  
+
   alarm_name          = "${var.function_name}-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -86,17 +86,17 @@ resource "aws_cloudwatch_metric_alarm" "errors" {
 
 resource "aws_cloudwatch_metric_alarm" "duration" {
   provider = aws.standby
-  
+
   alarm_name          = "${var.function_name}-duration"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Duration"
   namespace           = "AWS/Lambda"
   period              = 300
-  statistic          = "Average"
-  threshold          = 10000  # 10 seconds
-  alarm_description  = "Lambda function duration is too high"
-  alarm_actions      = var.alarm_actions
+  statistic           = "Average"
+  threshold           = 10000 # 10 seconds
+  alarm_description   = "Lambda function duration is too high"
+  alarm_actions       = var.alarm_actions
 
   dimensions = {
     FunctionName = var.function_name

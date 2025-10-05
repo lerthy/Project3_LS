@@ -88,3 +88,15 @@ variable "github_webhook_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "development"
+}
+
+variable "approval_email" {
+  description = "Email address for manual approval notifications"
+  type        = string
+  default     = ""
+}

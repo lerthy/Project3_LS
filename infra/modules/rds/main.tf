@@ -42,30 +42,30 @@ resource "aws_iam_role_policy" "dms_vpc_policy" {
 }
 
 resource "aws_dms_replication_subnet_group" "dms_subnet_group" {
-  replication_subnet_group_id = "dms-replication-subnet-group"
-  subnet_ids                  = var.dms_subnet_ids
-  tags                       = var.tags
+  replication_subnet_group_id          = "dms-replication-subnet-group"
+  subnet_ids                           = var.dms_subnet_ids
+  tags                                 = var.tags
   replication_subnet_group_description = "Subnet group for DMS replication instance"
 
   depends_on = [aws_iam_role.dms_vpc_role]
 }
 resource "aws_dms_replication_instance" "rds_replication" {
-  count = var.environment == "production" ? 1 : 0  # Only create DMS for production
-  
+  count = var.environment == "production" ? 1 : 0 # Only create DMS for production
+
   replication_instance_id     = "rds-replication-instance"
-  allocated_storage           = var.environment == "production" ? 100 : 50  # Smaller storage for non-prod
+  allocated_storage           = var.environment == "production" ? 100 : 50 # Smaller storage for non-prod
   replication_instance_class  = var.environment == "production" ? "dms.t3.medium" : "dms.t3.small"
   engine_version              = "3.4.6"
   publicly_accessible         = false
-  multi_az                    = var.environment == "production" ? true : false  # Cost optimization
+  multi_az                    = var.environment == "production" ? true : false # Cost optimization
   vpc_security_group_ids      = [aws_security_group.rds_ingress.id]
   replication_subnet_group_id = var.dms_subnet_group_id
-  tags = var.tags
+  tags                        = var.tags
 }
 
 resource "aws_dms_endpoint" "source" {
-  count = var.environment == "production" ? 1 : 0  # Only create for production
-  
+  count = var.environment == "production" ? 1 : 0 # Only create for production
+
   endpoint_id   = "source-endpoint"
   endpoint_type = "source"
   engine_name   = "postgres"
@@ -78,8 +78,8 @@ resource "aws_dms_endpoint" "source" {
 }
 
 resource "aws_dms_endpoint" "target" {
-  count = var.environment == "production" ? 1 : 0  # Only create for production
-  
+  count = var.environment == "production" ? 1 : 0 # Only create for production
+
   endpoint_id   = "target-endpoint"
   endpoint_type = "target"
   engine_name   = "postgres"
@@ -92,16 +92,16 @@ resource "aws_dms_endpoint" "target" {
 }
 
 resource "aws_dms_replication_task" "rds_to_standby" {
-  count = var.environment == "production" ? 1 : 0  # Only create for production
-  
-  replication_task_id        = "rds-to-standby"
-  migration_type             = "cdc"
-  replication_instance_arn   = aws_dms_replication_instance.rds_replication[0].replication_instance_arn
-  source_endpoint_arn        = aws_dms_endpoint.source[0].endpoint_arn
-  target_endpoint_arn        = aws_dms_endpoint.target[0].endpoint_arn
-  table_mappings             = file("${path.module}/dms-table-mappings.json")
-  replication_task_settings  = file("${path.module}/dms-task-settings.json")
-  tags = var.tags
+  count = var.environment == "production" ? 1 : 0 # Only create for production
+
+  replication_task_id       = "rds-to-standby"
+  migration_type            = "cdc"
+  replication_instance_arn  = aws_dms_replication_instance.rds_replication[0].replication_instance_arn
+  source_endpoint_arn       = aws_dms_endpoint.source[0].endpoint_arn
+  target_endpoint_arn       = aws_dms_endpoint.target[0].endpoint_arn
+  table_mappings            = file("${path.module}/dms-table-mappings.json")
+  replication_task_settings = file("${path.module}/dms-task-settings.json")
+  tags                      = var.tags
 }
 # Default VPC to host RDS security group
 data "aws_vpc" "default" {
@@ -139,11 +139,11 @@ resource "aws_security_group" "rds_ingress" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    from_port                = 5432
-    to_port                  = 5432
-    protocol                 = "tcp"
-    security_groups          = [var.allowed_sg_id]
-    description              = "Allow Postgres from Lambda security group"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [var.allowed_sg_id]
+    description     = "Allow Postgres from Lambda security group"
   }
 
   egress {
@@ -166,13 +166,13 @@ resource "aws_db_parameter_group" "contact_db_params" {
 
   parameter {
     name         = "shared_buffers"
-    value        = "{DBInstanceClassMemory*20/100}"  # 20% of instance memory
+    value        = "{DBInstanceClassMemory*20/100}" # 20% of instance memory
     apply_method = "pending-reboot"
   }
 
   parameter {
     name         = "work_mem"
-    value        = "8388608"  # 8MB
+    value        = "8388608" # 8MB
     apply_method = "pending-reboot"
   }
 
@@ -189,20 +189,20 @@ resource "aws_db_parameter_group" "contact_db_params" {
 resource "aws_db_instance" "contact_db" {
   # Use optimized parameter group
   parameter_group_name = aws_db_parameter_group.contact_db_params.name
-  
+
   # Enable enhanced monitoring
   monitoring_interval = 60
   monitoring_role_arn = aws_iam_role.rds_monitoring.arn
-  
+
   # Enable performance insights
   performance_insights_enabled          = true
   performance_insights_retention_period = 7
-  identifier            = var.db_identifier
-  engine                = "postgres"
-  engine_version        = var.engine_version
-  instance_class        = var.instance_class
-  allocated_storage     = var.allocated_storage
-  max_allocated_storage = var.max_allocated_storage
+  identifier                            = var.db_identifier
+  engine                                = "postgres"
+  engine_version                        = var.engine_version
+  instance_class                        = var.instance_class
+  allocated_storage                     = var.allocated_storage
+  max_allocated_storage                 = var.max_allocated_storage
 
   # Reliability improvements - conditional Multi-AZ based on environment
   storage_type            = var.storage_type
@@ -213,7 +213,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Security but Free Tier friendly
   storage_encrypted   = var.storage_encrypted
-  kms_key_id         = var.storage_encrypted ? aws_kms_key.rds_encryption.arn : null
+  kms_key_id          = var.storage_encrypted ? aws_kms_key.rds_encryption.arn : null
   publicly_accessible = var.publicly_accessible
   deletion_protection = var.deletion_protection
 

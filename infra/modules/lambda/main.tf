@@ -88,15 +88,15 @@ resource "aws_iam_role_policy" "lambda_secrets_policy" {
 
 # Lambda Function with performance optimizations
 resource "aws_lambda_function" "contact" {
-  filename         = "lambda-deployment.zip"
-  function_name    = var.function_name
-  role            = aws_iam_role.lambda_exec.arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = var.timeout
-  memory_size     = 128
-  publish         = true
-  
+  filename      = "lambda-deployment.zip"
+  function_name = var.function_name
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "index.handler"
+  runtime       = "python3.9"
+  timeout       = var.timeout
+  memory_size   = 128
+  publish       = true
+
   # Dead Letter Queue Configuration
   dead_letter_config {
     target_arn = aws_sqs_queue.lambda_dlq.arn
@@ -105,8 +105,8 @@ resource "aws_lambda_function" "contact" {
   # Environment variables (using Secrets Manager for DB credentials)
   environment {
     variables = {
-      DB_SECRET_ARN    = var.db_secret_arn
-      DLQ_URL          = aws_sqs_queue.lambda_dlq.url
+      DB_SECRET_ARN = var.db_secret_arn
+      DLQ_URL       = aws_sqs_queue.lambda_dlq.url
     }
   }
 
@@ -177,9 +177,9 @@ resource "aws_lambda_function_event_invoke_config" "contact_eic" {
       destination = aws_sqs_queue.lambda_dlq.arn
     }
   }
-  maximum_retry_attempts      = 2
+  maximum_retry_attempts       = 2
   maximum_event_age_in_seconds = 3600
-  
+
   depends_on = [aws_iam_role_policy.lambda_sqs_policy]
 }
 

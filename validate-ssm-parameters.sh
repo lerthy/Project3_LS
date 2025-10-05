@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-REGION="us-east-1"
+REGION="eu-north-1"  # Change to your desired AWS region
 REQUIRED_PARAMS=(
     "/project3/db/username"
     "/project3/db/password"

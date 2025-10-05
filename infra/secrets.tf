@@ -48,7 +48,7 @@ resource "aws_secretsmanager_secret" "db_credentials_standby" {
   })
 
   lifecycle {
-    ignore_changes = [name, description, tags]
+    ignore_changes  = [name, description, tags]
     prevent_destroy = true
   }
 }

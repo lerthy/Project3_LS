@@ -81,7 +81,7 @@ resource "aws_cloudwatch_dashboard" "cost_optimization" {
           ]
           period = 86400
           stat   = "Maximum"
-          region = "us-east-1" # Billing metrics are only in us-east-1
+          region = "eu-north-1" # Billing metrics are only in eu-north-1
           title  = "Service Costs (Daily)"
           yAxis = {
             left = {

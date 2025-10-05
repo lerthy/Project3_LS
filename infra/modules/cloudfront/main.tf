@@ -20,14 +20,14 @@ resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
 }
 
 resource "aws_s3_bucket_acl" "cloudfront_logs" {
-  bucket = aws_s3_bucket.cloudfront_logs.id
-  acl    = "log-delivery-write"
+  bucket     = aws_s3_bucket.cloudfront_logs.id
+  acl        = "log-delivery-write"
   depends_on = [aws_s3_bucket_ownership_controls.cloudfront_logs]
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "cloudfront_logs_lifecycle" {
   bucket = aws_s3_bucket.cloudfront_logs.id
-  
+
   rule {
     id     = "delete_old_logs"
     status = "Enabled"
@@ -63,12 +63,12 @@ resource "aws_cloudfront_response_headers_policy" "optimized" {
     }
     frame_options {
       frame_option = "DENY"
-      override = true
+      override     = true
     }
     strict_transport_security {
       access_control_max_age_sec = 31536000
-      include_subdomains = true
-      override = true
+      include_subdomains         = true
+      override                   = true
     }
   }
 }
@@ -85,14 +85,14 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   enabled             = true
-  is_ipv6_enabled    = true
+  is_ipv6_enabled     = true
   default_root_object = "index.html"
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
     target_origin_id = "s3-origin"
-    compress        = true
+    compress         = true
 
     forwarded_values {
       query_string = false
@@ -115,7 +115,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "s3-origin"
-    compress        = true
+    compress         = true
 
     forwarded_values {
       query_string = false
@@ -124,10 +124,10 @@ resource "aws_cloudfront_distribution" "cdn" {
       }
     }
 
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl               = 86400    # 1 day
-    default_ttl           = 604800   # 1 week
-    max_ttl               = 31536000 # 1 year
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 86400    # 1 day
+    default_ttl                = 604800   # 1 week
+    max_ttl                    = 31536000 # 1 year
     response_headers_policy_id = aws_cloudfront_response_headers_policy.optimized.id
   }
 
@@ -137,8 +137,8 @@ resource "aws_cloudfront_distribution" "cdn" {
   # Enable access logging for cost analysis
   logging_config {
     include_cookies = false
-    bucket         = aws_s3_bucket.cloudfront_logs.bucket_domain_name
-    prefix         = "cloudfront-logs/"
+    bucket          = aws_s3_bucket.cloudfront_logs.bucket_domain_name
+    prefix          = "cloudfront-logs/"
   }
 
   restrictions {

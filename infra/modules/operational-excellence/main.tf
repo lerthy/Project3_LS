@@ -5,10 +5,10 @@
 # SNS Topic for CI/CD Notifications
 resource "aws_sns_topic" "cicd_notifications" {
   name = "cicd-pipeline-notifications-${var.environment}"
-  
+
   tags = merge(var.tags, {
-    Name = "cicd-notifications-${var.environment}"
-    Type = "operational-excellence"
+    Name    = "cicd-notifications-${var.environment}"
+    Type    = "operational-excellence"
     Purpose = "pipeline-monitoring"
   })
 }
@@ -121,7 +121,7 @@ resource "aws_cloudwatch_metric_alarm" "web_build_failures" {
 # Build Duration Monitoring (for performance tracking)
 resource "aws_cloudwatch_metric_alarm" "build_duration_warning" {
   count = var.environment == "production" ? 1 : 0
-  
+
   alarm_name          = "build-duration-warning-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -151,10 +151,10 @@ resource "aws_cloudwatch_metric_alarm" "build_duration_warning" {
 # SNS Topic for Manual Approvals
 resource "aws_sns_topic" "manual_approval" {
   name = "manual-approval-notifications-${var.environment}"
-  
+
   tags = merge(var.tags, {
-    Name = "manual-approval-${var.environment}"
-    Type = "operational-excellence"
+    Name    = "manual-approval-${var.environment}"
+    Type    = "operational-excellence"
     Purpose = "deployment-approval"
   })
 }
@@ -269,10 +269,10 @@ resource "aws_cloudwatch_dashboard" "operational_excellence" {
         width  = 24
         height = 6
         properties = {
-          query   = "SOURCE '/aws/codebuild/${var.infra_build_project}' | fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20"
-          region  = data.aws_region.current.name
-          title   = "Recent Build Errors"
-          view    = "table"
+          query  = "SOURCE '/aws/codebuild/${var.infra_build_project}' | fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20"
+          region = data.aws_region.current.name
+          title  = "Recent Build Errors"
+          view   = "table"
         }
       },
       {
@@ -403,7 +403,7 @@ resource "aws_cloudwatch_dashboard" "deployment_health" {
 # Deployment Health Check Alarm
 resource "aws_cloudwatch_metric_alarm" "deployment_health_check" {
   count = var.environment == "production" ? 1 : 0
-  
+
   alarm_name          = "deployment-health-check-${var.environment}"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
@@ -425,3 +425,236 @@ resource "aws_cloudwatch_metric_alarm" "deployment_health_check" {
     Type = "operational-excellence"
   })
 }
+
+# ============================================================================
+# INFRASTRUCTURE DRIFT DETECTION
+# ============================================================================
+
+# Lambda function for drift detection
+# ============================================================================
+# INFRASTRUCTURE DRIFT DETECTION
+# ============================================================================
+
+# SNS Topic for drift alerts
+resource "aws_sns_topic" "drift_alerts" {
+  name = "${var.environment}-drift-alerts"
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-drift-alerts"
+    Type = "operational-excellence"
+  })
+}
+
+resource "aws_sns_topic_subscription" "drift_alerts_email" {
+  count     = var.notification_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.drift_alerts.arn
+  protocol  = "email"
+  endpoint  = var.notification_email
+}
+
+# CloudWatch Log Group for drift detection Lambda
+resource "aws_cloudwatch_log_group" "drift_detection" {
+  name              = "/aws/lambda/${var.environment}-drift-detection"
+  retention_in_days = 14
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-drift-detection-logs"
+    Type = "operational-excellence"
+  })
+}
+
+# IAM Role for drift detection Lambda
+resource "aws_iam_role" "drift_detection" {
+  name = "${var.environment}-drift-detection-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-drift-detection-role"
+    Type = "operational-excellence"
+  })
+}
+
+resource "aws_iam_role_policy" "drift_detection" {
+  name = "${var.environment}-drift-detection-policy"
+  role = aws_iam_role.drift_detection.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.environment}-drift-detection:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.drift_alerts.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "cloudwatch:namespace" = "Custom/InfrastructureDrift"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "drift_detection_policy" {
+  role       = aws_iam_role.drift_detection_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Create Lambda deployment package
+data "archive_file" "drift_detection" {
+  type        = "zip"
+  source_file = "${path.module}/drift_detection.py"
+  output_path = "${path.module}/drift_detection.zip"
+}
+
+resource "aws_lambda_function" "drift_detection" {
+  filename         = data.archive_file.drift_detection.output_path
+  function_name    = "${var.environment}-drift-detection"
+  role             = aws_iam_role.drift_detection_role.arn
+  handler          = "drift_detection.handler"
+  runtime          = "python3.9"
+  timeout          = 300
+  memory_size      = 256
+  source_code_hash = data.archive_file.drift_detection.output_base64sha256
+
+  environment {
+    variables = {
+      TERRAFORM_STATE_BUCKET = var.terraform_state_bucket
+      TERRAFORM_STATE_KEY    = var.terraform_state_key
+      SNS_TOPIC_ARN          = aws_sns_topic.drift_alerts.arn
+      ENVIRONMENT            = var.environment
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.drift_detection_policy,
+    aws_cloudwatch_log_group.drift_detection,
+  ]
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-drift-detection"
+    Type = "operational-excellence"
+  })
+}
+
+# IAM Role for Drift Detection Lambda
+resource "aws_iam_role" "drift_detection_role" {
+  name = "drift-detection-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name = "drift-detection-role-${var.environment}"
+    Type = "operational-excellence"
+  })
+}
+
+# IAM Policy for Drift Detection
+resource "aws_iam_role_policy" "drift_detection_policy" {
+  name = "drift-detection-policy-${var.environment}"
+  role = aws_iam_role.drift_detection_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.terraform_state_bucket}",
+          "arn:aws:s3:::${var.terraform_state_bucket}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:*:table/terraform-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.cicd_notifications.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*",
+          "s3:List*",
+          "s3:Get*",
+          "lambda:List*",
+          "lambda:Get*",
+          "apigateway:GET",
+          "rds:Describe*",
+          "cloudfront:List*",
+          "cloudfront:Get*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+

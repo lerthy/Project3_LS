@@ -13,16 +13,16 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
           stacked = false
           metrics = [
             # Primary RDS metrics
-            [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.primary_rds_id, { "region": var.primary_region } ],
-            [ "AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", var.primary_rds_id, { "region": var.primary_region } ],
-            [ "AWS/RDS", "ReadIOPS", "DBInstanceIdentifier", var.primary_rds_id, { "region": var.primary_region } ],
-            [ "AWS/RDS", "WriteIOPS", "DBInstanceIdentifier", var.primary_rds_id, { "region": var.primary_region } ],
-            
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.primary_rds_id, { "region" : var.primary_region }],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", var.primary_rds_id, { "region" : var.primary_region }],
+            ["AWS/RDS", "ReadIOPS", "DBInstanceIdentifier", var.primary_rds_id, { "region" : var.primary_region }],
+            ["AWS/RDS", "WriteIOPS", "DBInstanceIdentifier", var.primary_rds_id, { "region" : var.primary_region }],
+
             # Standby RDS metrics
-            [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.standby_rds_id, { "region": var.standby_region } ],
-            [ "AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", var.standby_rds_id, { "region": var.standby_region } ],
-            [ "AWS/RDS", "ReadIOPS", "DBInstanceIdentifier", var.standby_rds_id, { "region": var.standby_region } ],
-            [ "AWS/RDS", "WriteIOPS", "DBInstanceIdentifier", var.standby_rds_id, { "region": var.standby_region } ]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.standby_rds_id, { "region" : var.standby_region }],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", var.standby_rds_id, { "region" : var.standby_region }],
+            ["AWS/RDS", "ReadIOPS", "DBInstanceIdentifier", var.standby_rds_id, { "region" : var.standby_region }],
+            ["AWS/RDS", "WriteIOPS", "DBInstanceIdentifier", var.standby_rds_id, { "region" : var.standby_region }]
           ]
           period = 300
           region = var.primary_region
@@ -38,14 +38,14 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
           stacked = false
           metrics = [
             # Primary Lambda metrics
-            [ "AWS/Lambda", "Invocations", "FunctionName", var.primary_lambda_name, { "region": var.primary_region } ],
-            [ "AWS/Lambda", "Errors", "FunctionName", var.primary_lambda_name, { "region": var.primary_region } ],
-            [ "AWS/Lambda", "Duration", "FunctionName", var.primary_lambda_name, { "region": var.primary_region } ],
-            
+            ["AWS/Lambda", "Invocations", "FunctionName", var.primary_lambda_name, { "region" : var.primary_region }],
+            ["AWS/Lambda", "Errors", "FunctionName", var.primary_lambda_name, { "region" : var.primary_region }],
+            ["AWS/Lambda", "Duration", "FunctionName", var.primary_lambda_name, { "region" : var.primary_region }],
+
             # Standby Lambda metrics
-            [ "AWS/Lambda", "Invocations", "FunctionName", var.standby_lambda_name, { "region": var.standby_region } ],
-            [ "AWS/Lambda", "Errors", "FunctionName", var.standby_lambda_name, { "region": var.standby_region } ],
-            [ "AWS/Lambda", "Duration", "FunctionName", var.standby_lambda_name, { "region": var.standby_region } ]
+            ["AWS/Lambda", "Invocations", "FunctionName", var.standby_lambda_name, { "region" : var.standby_region }],
+            ["AWS/Lambda", "Errors", "FunctionName", var.standby_lambda_name, { "region" : var.standby_region }],
+            ["AWS/Lambda", "Duration", "FunctionName", var.standby_lambda_name, { "region" : var.standby_region }]
           ]
           period = 300
           region = var.primary_region
@@ -61,14 +61,14 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
           stacked = false
           metrics = [
             # Primary API Gateway metrics
-            [ "AWS/ApiGateway", "4XXError", "ApiName", var.primary_api_name, { "region": var.primary_region } ],
-            [ "AWS/ApiGateway", "5XXError", "ApiName", var.primary_api_name, { "region": var.primary_region } ],
-            [ "AWS/ApiGateway", "Latency", "ApiName", var.primary_api_name, { "region": var.primary_region } ],
-            
+            ["AWS/ApiGateway", "4XXError", "ApiName", var.primary_api_name, { "region" : var.primary_region }],
+            ["AWS/ApiGateway", "5XXError", "ApiName", var.primary_api_name, { "region" : var.primary_region }],
+            ["AWS/ApiGateway", "Latency", "ApiName", var.primary_api_name, { "region" : var.primary_region }],
+
             # Standby API Gateway metrics
-            [ "AWS/ApiGateway", "4XXError", "ApiName", var.standby_api_name, { "region": var.standby_region } ],
-            [ "AWS/ApiGateway", "5XXError", "ApiName", var.standby_api_name, { "region": var.standby_region } ],
-            [ "AWS/ApiGateway", "Latency", "ApiName", var.standby_api_name, { "region": var.standby_region } ]
+            ["AWS/ApiGateway", "4XXError", "ApiName", var.standby_api_name, { "region" : var.standby_region }],
+            ["AWS/ApiGateway", "5XXError", "ApiName", var.standby_api_name, { "region" : var.standby_region }],
+            ["AWS/ApiGateway", "Latency", "ApiName", var.standby_api_name, { "region" : var.standby_region }]
           ]
           period = 300
           region = var.primary_region
@@ -84,11 +84,11 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
           stacked = false
           metrics = [
             # Route53 health check metrics (only if health check IDs are provided)
-            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.primary_health_check_id != "" ? var.primary_health_check_id : "example-health-check-1" ],
-            [ "AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.standby_health_check_id != "" ? var.standby_health_check_id : "example-health-check-2" ]
+            ["AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.primary_health_check_id != "" ? var.primary_health_check_id : "example-health-check-1"],
+            ["AWS/Route53", "HealthCheckStatus", "HealthCheckId", var.standby_health_check_id != "" ? var.standby_health_check_id : "example-health-check-2"]
           ]
           period = 60
-          region = "us-east-1" # Route53 metrics are always in us-east-1
+          region = "eu-north-1" # Route53 metrics are always in eu-north-1
           title  = "Route53 Health Check Status"
         }
       }
@@ -130,9 +130,9 @@ resource "aws_iam_role_policy_attachment" "alert_processor_basic" {
 resource "aws_lambda_function" "alert_processor" {
   filename      = "${path.module}/alert_processor.zip"
   function_name = "multi-region-alert-processor"
-  role         = aws_iam_role.alert_processor.arn
-  handler      = "index.handler"
-  runtime      = "nodejs18.x"
+  role          = aws_iam_role.alert_processor.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
 
   environment {
     variables = {
@@ -144,7 +144,7 @@ resource "aws_lambda_function" "alert_processor" {
 # Primary RDS CPU alarm
 resource "aws_cloudwatch_metric_alarm" "primary_rds_cpu" {
   count = var.primary_rds_id != "" ? 1 : 0
-  
+
   alarm_name          = "primary-rds-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -164,7 +164,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_rds_cpu" {
 # Standby RDS CPU alarm
 resource "aws_cloudwatch_metric_alarm" "standby_rds_cpu" {
   count = var.standby_rds_id != "" ? 1 : 0
-  
+
   alarm_name          = "standby-rds-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -184,7 +184,7 @@ resource "aws_cloudwatch_metric_alarm" "standby_rds_cpu" {
 # Primary API errors alarm
 resource "aws_cloudwatch_metric_alarm" "primary_api_errors" {
   count = var.primary_api_name != "" ? 1 : 0
-  
+
   alarm_name          = "primary-api-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -204,7 +204,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_api_errors" {
 # Standby API errors alarm  
 resource "aws_cloudwatch_metric_alarm" "standby_api_errors" {
   count = var.standby_api_name != "" ? 1 : 0
-  
+
   alarm_name          = "standby-api-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -223,7 +223,7 @@ resource "aws_cloudwatch_metric_alarm" "standby_api_errors" {
 
 # Composite alarm for overall system health
 resource "aws_cloudwatch_composite_alarm" "system_health" {
-  alarm_name = "system-health-composite"
+  alarm_name        = "system-health-composite"
   alarm_description = "Composite alarm for overall system health"
 
   alarm_rule = join(" OR ", compact([

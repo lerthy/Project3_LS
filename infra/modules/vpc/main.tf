@@ -124,7 +124,7 @@ resource "aws_route_table_association" "private" {
 # Network ACLs for Public Subnets
 resource "aws_network_acl" "public" {
   vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, { Name = "${var.environment}-public-nacl" })
+  tags   = merge(var.tags, { Name = "${var.environment}-public-nacl" })
 }
 
 # Allow HTTPS inbound, deny all else (example)
@@ -160,7 +160,7 @@ resource "aws_network_acl_association" "public" {
 # Network ACLs for Private Subnets
 resource "aws_network_acl" "private" {
   vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, { Name = "${var.environment}-private-nacl" })
+  tags   = merge(var.tags, { Name = "${var.environment}-private-nacl" })
 }
 
 # Allow DB traffic from Lambda SG CIDR (example: adjust as needed)

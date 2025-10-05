@@ -8,7 +8,7 @@
 
 resource "aws_kms_key" "rds_encryption" {
   description = "KMS key for RDS encryption - ${var.db_identifier}"
-  
+
   # Key policy allowing root account and RDS service access
   policy = jsonencode({
     Version = "2012-10-17"
@@ -69,7 +69,7 @@ resource "aws_kms_key" "rds_encryption" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name = "rds-encryption-key-${var.db_identifier}"
     Type = "rds-encryption"
@@ -91,7 +91,7 @@ resource "random_password" "db_password" {
   count   = var.db_password == "" ? 1 : 0
   length  = 32
   special = true
-  
+
   # Exclude characters that might cause issues in connection strings
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
@@ -102,12 +102,12 @@ resource "random_password" "db_password" {
 # Additional security group rules for database access
 resource "aws_security_group_rule" "rds_secrets_manager_access" {
   count = var.enable_secrets_manager_access ? 1 : 0
-  
+
   type              = "ingress"
   from_port         = 5432
   to_port           = 5432
   protocol          = "tcp"
-  cidr_blocks       = ["10.0.0.0/16"]  # Adjust based on your VPC CIDR
+  cidr_blocks       = ["10.0.0.0/16"] # Adjust based on your VPC CIDR
   security_group_id = aws_security_group.rds_ingress.id
   description       = "Allow Secrets Manager Lambda access"
 }

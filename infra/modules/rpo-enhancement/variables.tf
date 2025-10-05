@@ -19,7 +19,7 @@ variable "notification_email" {
 variable "primary_region" {
   description = "Primary AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-north-1"
 }
 
 variable "standby_region" {
@@ -41,7 +41,7 @@ variable "standby_rds_identifier" {
 variable "backup_retention_hours" {
   description = "Number of hours to retain hourly backups"
   type        = number
-  default     = 168  # 7 days
+  default     = 168 # 7 days
 }
 
 variable "backup_bucket_name" {

@@ -6,7 +6,7 @@
 # KMS Key for Lambda Environment Variables Encryption
 resource "aws_kms_key" "lambda_env_encryption" {
   description = "KMS key for Lambda environment variables encryption"
-  
+
   # Key policy allowing root account and Lambda service access
   policy = jsonencode({
     Version = "2012-10-17"
@@ -64,7 +64,7 @@ resource "aws_kms_key" "lambda_env_encryption" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name = "lambda-env-encryption-key"
     Type = "lambda-encryption"

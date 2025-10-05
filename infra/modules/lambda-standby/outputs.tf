@@ -14,7 +14,7 @@ output "security_group_id" {
 }
 
 output "invoke_arn" {
-  description = "ARN to be used for invoking Lambda Function from API Gateway"  
+  description = "ARN to be used for invoking Lambda Function from API Gateway"
   value       = aws_lambda_function.function.invoke_arn
 }
 

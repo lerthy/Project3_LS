@@ -46,7 +46,7 @@ output "infra_build_alarm_name" {
 }
 
 output "web_build_alarm_name" {
-  description = "Name of the web build failure alarm"  
+  description = "Name of the web build failure alarm"
   value       = aws_cloudwatch_metric_alarm.web_build_failures.alarm_name
 }
 
