@@ -143,7 +143,25 @@ phases:
           terraform -chdir=infra init
         fi
       - echo "Validating Terraform state consistency..."
-      - terraform -chdir=infra plan -out=tfplan
+      - |
+        # Attempt to run terraform plan with retry logic for state locks
+        for i in {1..3}; do
+          echo "Terraform plan attempt $i/3..."
+          if terraform -chdir=infra plan -out=tfplan; then
+            echo "✅ Terraform plan successful"
+            break
+          else
+            if [ $i -eq 3 ]; then
+              echo "❌ Terraform plan failed after 3 attempts"
+              echo "This may be due to a state lock or configuration issues."
+              echo "Manual intervention may be required to resolve state lock conflicts."
+              exit 1
+            else
+              echo "⏳ Plan failed, waiting 30 seconds before retry..."
+              sleep 30
+            fi
+          fi
+        done
       - |
         if [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_CREATED" ] || [ "$CODEBUILD_WEBHOOK_EVENT" = "PULL_REQUEST_UPDATED" ]; then
           echo "Skipping apply for pull request"
