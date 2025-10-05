@@ -56,6 +56,6 @@ output "dms_task_arn" {
 
 output "generated_password" {
   description = "Generated database password (sensitive)"
-  value       = var.db_password != "" ? var.db_password : try(random_password.db_password[0].result, "")
+  value       = local.final_password
   sensitive   = true
 }

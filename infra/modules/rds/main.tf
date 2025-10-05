@@ -1,4 +1,8 @@
-# No locals block - handle password directly in resource
+# Locals for safe password handling
+locals {
+  # Safe password handling - avoid sensitive conditionals in outputs
+  final_password = var.db_password != "" ? var.db_password : try(random_password.db_password[0].result, "")
+}
 
 resource "aws_iam_role" "dms_vpc_role" {
   name = "dms-vpc-role"
@@ -226,7 +230,7 @@ resource "aws_db_instance" "contact_db" {
 
   # Database configuration
   username = var.db_username
-  password = var.db_password != "" ? var.db_password : try(random_password.db_password[0].result, "")
+  password = local.final_password
   db_name  = var.db_name
 
   vpc_security_group_ids = [aws_security_group.rds_ingress.id]

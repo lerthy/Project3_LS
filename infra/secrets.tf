@@ -23,7 +23,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = var.db_username
-    password = var.db_password
+    password = module.rds.generated_password
     host     = module.rds.rds_address
     database = var.db_name
     port     = module.rds.rds_port
@@ -59,7 +59,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_standby_version" {
   secret_id = aws_secretsmanager_secret.db_credentials_standby.id
   secret_string = jsonencode({
     username = var.db_username
-    password = var.db_password
+    password = module.rds.generated_password
     host     = module.rds_standby.standby_db_endpoint
     database = var.db_name
     port     = module.rds_standby.standby_db_port
