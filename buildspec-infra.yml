@@ -47,26 +47,16 @@ phases:
       - chmod +x tfsec
       - echo "Running comprehensive security scan with tfsec..."
       - |
-        # Run tfsec and capture output regardless of exit code
-        ./tfsec infra/ --format json --out tfsec-report.json || true
-        
-        # Check for CRITICAL vulnerabilities only
-        CRITICAL_COUNT=$(jq -r '.results[] | select(.severity == "CRITICAL") | .severity' tfsec-report.json 2>/dev/null | wc -l || echo "0")
-        TOTAL_COUNT=$(jq -r '.results[] | .severity' tfsec-report.json 2>/dev/null | wc -l || echo "0")
-        
-        echo "Security scan results: $TOTAL_COUNT total issues, $CRITICAL_COUNT critical"
-        
-        if [ "$CRITICAL_COUNT" -gt 0 ]; then
-          echo "❌ CRITICAL: $CRITICAL_COUNT critical security vulnerabilities detected!"
+        # Run tfsec and check only for CRITICAL issues
+        if ./tfsec infra/ --format json --out tfsec-report.json --severity CRITICAL; then
+          echo "✅ Security scan passed - 0 critical vulnerabilities found"
+          echo "ℹ️  Running full scan to show all findings for reference..."
+          ./tfsec infra/ --format lovely || true
+        else
+          echo "❌ CRITICAL: Critical security vulnerabilities detected!"
           ./tfsec infra/ --format lovely
           echo "Security scan failed. Please fix CRITICAL vulnerabilities before proceeding."
           exit 1
-        else
-          echo "✅ Security scan passed - 0 critical vulnerabilities found"
-          if [ "$TOTAL_COUNT" -gt 0 ]; then
-            echo "ℹ️  Note: $TOTAL_COUNT non-critical security findings detected (HIGH/MEDIUM/LOW)"
-            ./tfsec infra/ --format lovely
-          fi
         fi
       - echo "Running TFLint for best practices..."
       - |
