@@ -97,6 +97,16 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
   }
 }
 
+# Block public access for CodePipeline artifacts bucket
+resource "aws_s3_bucket_public_access_block" "codepipeline_artifacts_public_access" {
+  bucket = aws_s3_bucket.codepipeline_artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 # S3 Intelligent-Tiering configuration for automatic cost optimization
 resource "aws_s3_bucket_intelligent_tiering_configuration" "website_tiering" {
   bucket = aws_s3_bucket.website.id

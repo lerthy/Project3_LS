@@ -22,17 +22,11 @@ resource "aws_security_group" "rds_ingress_standby" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Adjust to match your security requirements
-    description = "Allow Postgres from Lambda security group"
+    cidr_blocks = ["10.2.0.0/16"] # Only allow from standby VPC CIDR
+    description = "Allow Postgres from standby VPC only"
   }
 
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
+  # No egress rules needed for RDS - databases don't initiate outbound connections
 
   tags = merge(var.tags, { Name = "rds-standby-private-sg" })
 }

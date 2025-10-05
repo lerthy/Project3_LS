@@ -153,13 +153,7 @@ resource "aws_security_group" "rds_ingress" {
     description     = "Allow Postgres from Lambda security group"
   }
 
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
+  # No egress rules needed for RDS - databases don't initiate outbound connections
 
   tags = merge(var.tags, {
     Name = "rds-private-sg"

@@ -312,6 +312,16 @@ resource "aws_s3_bucket_versioning" "backup_metadata_versioning" {
   }
 }
 
+# Block public access for backup metadata bucket
+resource "aws_s3_bucket_public_access_block" "backup_metadata_public_access" {
+  bucket = aws_s3_bucket.backup_metadata.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "backup_metadata_encryption" {
   bucket = aws_s3_bucket.backup_metadata.id
 

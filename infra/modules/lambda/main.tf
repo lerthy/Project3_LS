@@ -31,13 +31,13 @@ resource "aws_security_group" "lambda_sg" {
   description = "Security group for Lambda to access RDS"
   vpc_id      = data.aws_vpc.default.id
 
-  # HTTPS outbound for API calls and AWS services
+  # HTTPS outbound for AWS services (required for Lambda)
   egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS outbound for AWS services"
+    description = "HTTPS outbound for AWS services - required for Lambda"
   }
 
   # PostgreSQL outbound to RDS
