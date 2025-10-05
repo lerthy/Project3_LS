@@ -98,7 +98,8 @@ resource "aws_cloudwatch_dashboard" "multi_region" {
 
 # SNS topic for alarms
 resource "aws_sns_topic" "alerts" {
-  name = "multi-region-alerts"
+  name              = "multi-region-alerts"
+  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
 }
 
 # Multi-region monitoring resources

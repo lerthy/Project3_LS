@@ -3,7 +3,8 @@
 
 # SNS Topic for disaster recovery notifications
 resource "aws_sns_topic" "disaster_recovery" {
-  name = "disaster-recovery-${var.environment}"
+  name              = "disaster-recovery-${var.environment}"
+  kms_master_key_id = "alias/aws/sns"  # Use AWS-managed key for SNS encryption
 
   tags = merge(var.tags, {
     Name = "disaster-recovery-notifications"

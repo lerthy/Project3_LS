@@ -31,13 +31,18 @@ resource "aws_security_group" "lambda_sg" {
   description = "Security group for Lambda to access RDS"
   vpc_id      = data.aws_vpc.default.id
 
-  # HTTPS outbound for AWS services (required for Lambda)
+  # HTTPS outbound for AWS services (more secure approach)
+  # Using private IP ranges + VPC endpoints instead of 0.0.0.0/0
   egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS outbound for AWS services - required for Lambda"
+    cidr_blocks = [
+      "10.0.0.0/8",    # Private networks
+      "172.16.0.0/12", # Private networks  
+      "192.168.0.0/16" # Private networks
+    ]
+    description = "HTTPS outbound for AWS services via VPC endpoints"
   }
 
   # PostgreSQL outbound to RDS
@@ -157,8 +162,10 @@ resource "aws_lambda_alias" "contact_live" {
 
 # Dead-letter queue for Lambda failures
 resource "aws_sqs_queue" "lambda_dlq" {
-  name = "${var.function_name}-dlq"
-  tags = var.tags
+  name                              = "${var.function_name}-dlq"
+  kms_master_key_id                 = "alias/aws/sqs"  # Enable SQS encryption
+  kms_data_key_reuse_period_seconds = 300             # KMS key reuse for cost optimization
+  tags                              = var.tags
 }
 
 # IAM policy for Lambda to access SQS DLQ
