@@ -22,27 +22,27 @@ resource "aws_route53_health_check" "standby_api" {
 resource "aws_route53_record" "api_failover" {
   zone_id = var.route53_zone_id
   name    = "api.project3.com"
-  type    = "A"
+  type    = "CNAME"
 
   set_identifier = "primary"
   failover_routing_policy {
     type = "PRIMARY"
   }
   health_check_id = aws_route53_health_check.primary_api.id
-  records         = [var.primary_api_ip]
+  records         = [var.primary_api_dns]
   ttl             = 60
 }
 
 resource "aws_route53_record" "api_failover_standby" {
   zone_id = var.route53_zone_id
   name    = "api.project3.com"
-  type    = "A"
+  type    = "CNAME"
 
   set_identifier = "standby"
   failover_routing_policy {
     type = "SECONDARY"
   }
   health_check_id = aws_route53_health_check.standby_api.id
-  records         = [var.standby_api_ip]
+  records         = [var.standby_api_dns]
   ttl             = 60
 }

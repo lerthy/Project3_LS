@@ -86,12 +86,14 @@ module "s3" {
 module "cloudfront" {
   source = "./modules/cloudfront"
 
-  s3_bucket_regional_domain_name = module.s3.website_bucket_regional_domain_name
-  s3_bucket_name                 = module.s3.website_bucket_name
-  price_class                    = var.environment == "production" ? "PriceClass_All" : "PriceClass_100"
-  log_retention_days             = var.environment == "production" ? 90 : 30
-  environment                    = var.environment
-  tags                           = local.common_tags
+  s3_bucket_regional_domain_name         = module.s3.website_bucket_regional_domain_name
+  s3_standby_bucket_regional_domain_name = module.s3.website_standby_bucket_regional_domain_name
+  s3_bucket_name                         = module.s3.website_bucket_name
+  price_class                            = var.environment == "production" ? "PriceClass_All" : "PriceClass_100"
+  log_retention_days                     = var.environment == "production" ? 90 : 30
+  environment                            = var.environment
+  enable_origin_failover                 = var.environment == "production" ? true : false
+  tags                                   = local.common_tags
 }
 
 # RDS Module
@@ -108,7 +110,10 @@ module "rds" {
   allowed_sg_id       = module.lambda.lambda_security_group_id
   dms_subnet_ids      = data.aws_subnets.default_vpc_subnets.ids
   dms_subnet_group_id = "dms-replication-subnet-group"
+  standby_rds_address = module.rds_standby.standby_db_endpoint
   tags                = local.common_tags
+
+  depends_on = [module.rds_standby]
 }
 
 # RDS Standby Module (us-west-2)
@@ -196,8 +201,6 @@ module "route53" {
 
   primary_api_dns = module.api_gateway.api_gateway_url
   standby_api_dns = module.api_gateway_standby.api_endpoint
-  primary_api_ip  = "1.2.3.4" # Placeholder - would be resolved from API Gateway
-  standby_api_ip  = "5.6.7.8" # Placeholder - would be resolved from API Gateway
   route53_zone_id = var.route53_zone_id
   tags            = local.common_tags
 }

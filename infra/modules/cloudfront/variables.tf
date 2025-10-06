@@ -31,3 +31,15 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "s3_standby_bucket_regional_domain_name" {
+  description = "Regional domain name of the standby S3 bucket for failover"
+  type        = string
+  default     = ""
+}
+
+variable "enable_origin_failover" {
+  description = "Enable CloudFront origin failover to standby S3 bucket"
+  type        = bool
+  default     = false
+}

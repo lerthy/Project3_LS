@@ -104,14 +104,48 @@ resource "aws_cloudfront_response_headers_policy" "optimized" {
 
 # Note: WAF commented out due to region/scope restrictions in pipeline
 
-# CloudFront Distribution
+# CloudFront Distribution with Origin Failover
 resource "aws_cloudfront_distribution" "cdn" {
+  # Primary origin (eu-north-1)
   origin {
     domain_name = var.s3_bucket_regional_domain_name
-    origin_id   = "s3-origin"
+    origin_id   = "primary-s3-origin"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
+    }
+  }
+
+  # Standby origin (us-west-2) - only created if failover is enabled
+  dynamic "origin" {
+    for_each = var.enable_origin_failover && var.s3_standby_bucket_regional_domain_name != "" ? [1] : []
+    content {
+      domain_name = var.s3_standby_bucket_regional_domain_name
+      origin_id   = "standby-s3-origin"
+
+      s3_origin_config {
+        origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
+      }
+    }
+  }
+
+  # Origin group for automatic failover (only if failover is enabled)
+  dynamic "origin_group" {
+    for_each = var.enable_origin_failover && var.s3_standby_bucket_regional_domain_name != "" ? [1] : []
+    content {
+      origin_id = "s3-origin-group-with-failover"
+
+      failover_criteria {
+        status_codes = [403, 404, 500, 502, 503, 504]
+      }
+
+      member {
+        origin_id = "primary-s3-origin"
+      }
+
+      member {
+        origin_id = "standby-s3-origin"
+      }
     }
   }
 
@@ -122,7 +156,8 @@ resource "aws_cloudfront_distribution" "cdn" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
-    target_origin_id = "s3-origin"
+    # Use origin group if failover is enabled, otherwise use primary origin
+    target_origin_id = var.enable_origin_failover && var.s3_standby_bucket_regional_domain_name != "" ? "s3-origin-group-with-failover" : "primary-s3-origin"
     compress         = true
 
     forwarded_values {
@@ -145,7 +180,8 @@ resource "aws_cloudfront_distribution" "cdn" {
     path_pattern     = "/assets/*"
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "s3-origin"
+    # Use origin group if failover is enabled, otherwise use primary origin
+    target_origin_id = var.enable_origin_failover && var.s3_standby_bucket_regional_domain_name != "" ? "s3-origin-group-with-failover" : "primary-s3-origin"
     compress         = true
 
     forwarded_values {

@@ -59,8 +59,7 @@ Your Project3_LS codebase successfully implements all six AWS Well-Architected F
 
 **Modules Implementing Reliability:**
 - `infra/modules/disaster-recovery/` - DR automation
-- `infra/modules/rds-replica/` - Database replication
-- `infra/modules/rds-standby/` - Standby region database
+- `infra/modules/rds-standby/` - Standby region database (cross-region replication via DMS)
 - `infra/modules/rpo-enhancement/` - Recovery optimization
 - `infra/modules/monitoring/` - System monitoring
 - `scripts/enhanced-health-check.sh` - Health validation
