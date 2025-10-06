@@ -286,12 +286,6 @@ else
     log_warning "Web Lambda zip file missing"
 fi
 
-if [ -f "$INFRA_DIR/modules/disaster-recovery/disaster_recovery.zip" ]; then
-    log_success "Disaster recovery Lambda zip exists"
-else
-    log_warning "Disaster recovery Lambda zip missing"
-fi
-
 if [ -f "$INFRA_DIR/modules/rpo-enhancement/hourly_backup.zip" ]; then
     log_success "RPO enhancement Lambda zip exists"
 else

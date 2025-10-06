@@ -143,8 +143,7 @@ backup:* on all resources
 3. ✅ **modules/route53/** - Failover DNS now has permissions
 4. ✅ **modules/api-gateway/** - WAF ACL now has permissions
 5. ✅ **modules/rpo-enhancement/** - Backup Lambda now has permissions
-6. ✅ **modules/disaster-recovery/** - DR orchestration now has permissions
-7. ✅ **modules/operational-excellence/** - EventBridge rules now have permissions
+6. ✅ **modules/operational-excellence/** - EventBridge rules now have permissions
 
 ### Policy Structure (Final):
 ```
