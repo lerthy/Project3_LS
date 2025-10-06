@@ -109,7 +109,6 @@ check_lambda_function() {
         return 0  # Don't fail deployment - Lambda might not support health endpoint yet
     fi
 }
-}
 
 # S3 website health check
 check_s3_website() {
