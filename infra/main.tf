@@ -40,6 +40,16 @@ import {
   id = "contact-form/live"
 }
 
+import {
+  to = module.iam.aws_iam_role.codepipeline_role
+  id = "codepipeline-role-project3"
+}
+
+import {
+  to = module.iam.aws_iam_role.codebuild_role
+  id = "codebuild-role-project3-v2"
+}
+
 # S3 Module
 # VPC Module - Primary Region
 module "primary_vpc" {
