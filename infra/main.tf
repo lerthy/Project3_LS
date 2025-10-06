@@ -108,12 +108,7 @@ module "rds" {
   storage_encrypted   = true
   publicly_accessible = false
   allowed_sg_id       = module.lambda.lambda_security_group_id
-  dms_subnet_ids      = data.aws_subnets.default_vpc_subnets.ids
-  dms_subnet_group_id = "dms-replication-subnet-group"
-  standby_rds_address = module.rds_standby.standby_db_endpoint
   tags                = local.common_tags
-
-  depends_on = [module.rds_standby]
 }
 
 # RDS Standby Module (us-west-2)
@@ -134,6 +129,45 @@ module "rds_standby" {
   allocated_storage     = 20
   max_allocated_storage = 100
   tags                  = local.common_tags
+}
+
+# DMS Module - Cross-Region Database Replication (Production Only)
+# Note: This is a separate module to avoid circular dependencies with RDS
+module "dms_replication" {
+  source = "./modules/dms"
+  count  = var.environment == "production" ? 1 : 0
+
+  environment = var.environment
+
+  # DMS Instance Configuration
+  replication_instance_id    = "rds-replication-instance"
+  replication_instance_class = "dms.t3.small"
+  allocated_storage          = 50
+  multi_az                   = false
+
+  # Subnet Configuration
+  subnet_group_id = "dms-replication-subnet-group"
+  subnet_ids      = data.aws_subnets.default_vpc_subnets.ids
+
+  # Source Database (Primary RDS in eu-north-1)
+  source_db_endpoint = module.rds.rds_address
+  source_db_port     = 5432
+  source_db_username = var.db_username
+  source_db_password = module.rds.generated_password
+
+  # Target Database (Standby RDS in us-west-2)
+  target_db_endpoint = module.rds_standby.standby_db_endpoint
+  target_db_port     = 5432
+  target_db_username = var.db_username
+  target_db_password = module.rds.generated_password  # Standby uses same password as primary
+
+  # Database Configuration
+  database_name = var.db_name
+
+  tags = local.common_tags
+
+  # CRITICAL: Must depend on both RDS instances to avoid circular dependency
+  depends_on = [module.rds, module.rds_standby]
 }
 
 # Lambda Module

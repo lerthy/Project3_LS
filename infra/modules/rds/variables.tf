@@ -4,20 +4,9 @@ variable "environment" {
   default     = "development"
 }
 
-variable "dms_subnet_ids" {
-  description = "List of subnet IDs for DMS replication subnet group"
-  type        = list(string)
-}
-variable "dms_subnet_group_id" {
-  description = "DMS replication subnet group ID"
-  type        = string
-}
+# Note: DMS-related variables (dms_subnet_ids, dms_subnet_group_id, standby_rds_address) 
+# have been moved to the separate DMS module to avoid circular dependencies
 
-variable "standby_rds_address" {
-  description = "Address of the standby RDS instance in us-west-2"
-  type        = string
-  default     = "placeholder.us-west-2.rds.amazonaws.com"
-}
 variable "db_identifier" {
   description = "RDS instance identifier"
   type        = string
