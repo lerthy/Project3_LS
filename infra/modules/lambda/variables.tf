@@ -24,7 +24,7 @@ variable "runtime" {
 variable "timeout" {
   description = "Lambda function timeout in seconds"
   type        = number
-  default     = 10
+  default     = 30  # Increased for VPC Lambda with Secrets Manager access
 }
 
 variable "aws_region" {
