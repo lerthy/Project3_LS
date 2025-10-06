@@ -35,6 +35,11 @@ import {
   id = "contact-form"
 }
 
+import {
+  to = module.lambda.aws_lambda_alias.contact_live
+  id = "contact-form/live"
+}
+
 # S3 Module
 # VPC Module - Primary Region
 module "primary_vpc" {
