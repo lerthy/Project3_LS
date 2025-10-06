@@ -30,6 +30,11 @@ import {
   id = "alias/lambda-env-encryption"
 }
 
+import {
+  to = module.lambda.aws_lambda_function.contact
+  id = "contact-form"
+}
+
 # S3 Module
 # VPC Module - Primary Region
 module "primary_vpc" {
