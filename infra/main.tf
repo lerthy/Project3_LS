@@ -4,51 +4,8 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Import existing resources to prevent conflicts
-import {
-  to = aws_secretsmanager_secret.db_credentials
-  id = "project3/db-credentials"
-}
-
-import {
-  to = aws_secretsmanager_secret.db_credentials_standby
-  id = "project3/db-credentials-standby"
-}
-
-import {
-  to = module.lambda_standby.aws_cloudwatch_log_group.lambda
-  id = "/aws/lambda/contact-form-standby"
-}
-
-import {
-  to = module.lambda.aws_iam_role.lambda_exec
-  id = "lambda_exec_role_project3"
-}
-
-import {
-  to = module.lambda.aws_kms_alias.lambda_env_encryption
-  id = "alias/lambda-env-encryption"
-}
-
-import {
-  to = module.lambda.aws_lambda_function.contact
-  id = "contact-form"
-}
-
-import {
-  to = module.lambda.aws_lambda_alias.contact_live
-  id = "contact-form/live"
-}
-
-import {
-  to = module.iam.aws_iam_role.codepipeline_role
-  id = "codepipeline-role-project3"
-}
-
-import {
-  to = module.iam.aws_iam_role.codebuild_role
-  id = "codebuild-role-project3-v2"
-}
+# NOTE: Import blocks for existing resources are located in imports.tf
+# This keeps main.tf clean and organized while handling resource conflicts
 
 # S3 Module
 # VPC Module - Primary Region
