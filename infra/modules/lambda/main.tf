@@ -108,7 +108,7 @@ resource "aws_lambda_function" "contact" {
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
   handler       = "index.handler"
-  runtime       = "python3.9"
+  runtime       = "nodejs20.x"
   timeout       = var.timeout
   memory_size   = 128
   publish       = true
