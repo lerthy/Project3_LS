@@ -59,6 +59,7 @@ phases:
           # Get API Gateway URL from SSM
           echo "Retrieving deployment configuration..."
           API_GATEWAY_URL=$(aws ssm get-parameter --name "/api-gateway/api_gateway_url" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          API_KEY=$(aws ssm get-parameter --name "/api-gateway/api_key" --region $AWS_REGION --with-decryption --query "Parameter.Value" --output text 2>/dev/null || echo "")
           S3_BUCKET=$(aws ssm get-parameter --name "/s3/website_bucket_name" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
           CLOUDFRONT_ID=$(aws ssm get-parameter --name "/cloudfront/cloudfront_distribution_id" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
           LAMBDA_FUNCTION=$(aws ssm get-parameter --name "/lambda/lambda_function_name" --region $AWS_REGION --query "Parameter.Value" --output text 2>/dev/null || echo "")
@@ -67,9 +68,18 @@ phases:
           if [ -n "$API_GATEWAY_URL" ]; then
             echo "Updating API configuration..."
             sed -i "s|{{API_GATEWAY_URL}}|$API_GATEWAY_URL|g" web/static/js/config.js
-            echo "✅ API configuration updated"
+            echo "✅ API Gateway URL updated"
           else
             echo "⚠️ API Gateway URL not found - using placeholder"
+          fi
+          
+          # Update API Key in config
+          if [ -n "$API_KEY" ]; then
+            echo "Updating API Key..."
+            sed -i "s|{{API_KEY}}|$API_KEY|g" web/static/js/config.js
+            echo "✅ API Key updated"
+          else
+            echo "⚠️ API Key not found - using placeholder"
           fi
           
           # Deploy to S3
