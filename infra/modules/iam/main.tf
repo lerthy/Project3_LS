@@ -35,15 +35,11 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
           "s3:GetObject",
           "s3:GetObjectVersion",
           "s3:PutObject",
-          "s3:PutObjectAcl",
-          "s3:ListBucket",
-          "s3:GetBucketLocation"
+          "s3:PutObjectAcl"
         ]
         Resource = [
           var.artifacts_bucket_arn,
-          "${var.artifacts_bucket_arn}/*",
-          "arn:aws:s3:::codepipeline-artifacts-*",
-          "arn:aws:s3:::codepipeline-artifacts-*/*"
+          "${var.artifacts_bucket_arn}/*"
         ]
       },
       {
@@ -94,11 +90,11 @@ resource "aws_iam_role_policy_attachment" "codebuild_base_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"
 }
 
-# Split large policy into smaller focused policies to avoid 10KB limit
+# Split CodeBuild policies into smaller chunks to avoid 10KB limit
 
-# CloudWatch Logs Policy
-resource "aws_iam_role_policy" "codebuild_logs_policy" {
-  name = "codebuild-logs-permissions"
+# Core CodeBuild permissions (Logs, S3, DynamoDB)
+resource "aws_iam_role_policy" "codebuild_core" {
+  name = "codebuild-core-permissions"
   role = aws_iam_role.codebuild_role.id
 
   policy = jsonencode({
@@ -115,16 +111,123 @@ resource "aws_iam_role_policy" "codebuild_logs_policy" {
         ]
         Resource = [
           "arn:aws:logs:${var.aws_region}:*:log-group:/aws/codebuild/*",
-          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/*",
-          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/apigateway/*"
+          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:GetBucketLocation",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::terraform-state-*",
+          "arn:aws:s3:::terraform-state-*/*",
+          "arn:aws:s3:::my-website-bucket-*",
+          "arn:aws:s3:::my-website-bucket-*/*",
+          "arn:aws:s3:::codepipeline-artifacts-*",
+          "arn:aws:s3:::codepipeline-artifacts-*/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:${var.aws_region}:*:table/terraform-*"
         ]
       }
     ]
   })
 }
 
-# Use AWS managed policy to avoid 10KB limit issues
-resource "aws_iam_role_policy_attachment" "codebuild_power_user" {
-  role       = aws_iam_role.codebuild_role.name
-  policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
+# Compute services permissions (Lambda, EC2)
+resource "aws_iam_role_policy" "codebuild_compute" {
+  name = "codebuild-compute-permissions"
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:*"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:*:function:contact-form*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*",
+          "ec2:CreateTags"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole",
+          "sts:GetCallerIdentity"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# IAM and KMS permissions
+resource "aws_iam_role_policy" "codebuild_security" {
+  name = "codebuild-security-permissions" 
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole",
+          "iam:GetRole"
+        ]
+        Resource = [
+          "arn:aws:iam::*:role/lambda*",
+          "arn:aws:iam::*:role/codebuild*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Describe*",
+          "kms:List*",
+          "kms:Get*",
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:PutParameter"
+        ]
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/project3/*"
+        ]
+      }
+    ]
+  })
 }
