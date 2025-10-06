@@ -51,7 +51,7 @@ phases:
           
           # Run full test suite
           echo "Running frontend tests..."
-          npm --prefix web test -- --coverage --run
+          npm --prefix web test
           
           echo "Running Lambda tests..."
           npm --prefix web/lambda test -- --coverage
