@@ -27,17 +27,16 @@
 - Automatic failure detection triggers rollback mechanisms
 - Health check results feed into CloudWatch dashboards
 
-### 2. ✅ **Advanced Infrastructure Drift Detection**
-**Location:** `infra/modules/operational-excellence/advanced_drift_detection.py`
+### 2. ✅ **Infrastructure Drift Detection**
+**Location:** `infra/modules/operational-excellence/drift_detection.py`
 
 **Features Implemented:**
-- **Real-time Monitoring**: Continuous drift detection beyond daily checks
-- **Resource-Specific Analysis**: VPC, RDS, Lambda configuration monitoring
-- **Cost Impact Analysis**: Automatic calculation of drift-related cost changes
-- **Automated Remediation Suggestions**: Terraform commands for drift fixes
-- **CI/CD Pipeline Integration**: Deployment blocking based on critical drift
-- **Parallel Processing**: Multi-threaded analysis for faster detection
-- **State Reconciliation**: Recommendations for Terraform state updates
+- **Daily Automated Checks**: Scheduled drift detection at 6 PM UTC
+- **Terraform State Analysis**: Compares state with actual AWS resources
+- **Resource Monitoring**: Detects configuration drift across infrastructure
+- **CloudWatch Metrics**: Publishes drift detection metrics
+- **SNS Notifications**: Alerts on drift detection
+- **Drift Reporting**: Detailed drift analysis and reporting
 
 **Drift Categories:**
 - **Critical Drift**: Resource deletions, major configuration changes

@@ -110,8 +110,8 @@ This project demonstrates a comprehensive implementation of AWS Well-Architected
 **4. Infrastructure Drift Detection**
 - **Automated Scheduler**: Daily drift checks at 6 PM UTC
   - `infra/modules/operational-excellence/main.tf` lines 480-490
-- **Lambda Drift Detector**: Comprehensive resource analysis
-  - `infra/modules/operational-excellence/advanced_drift_detection.py`
+- **Lambda Drift Detector**: Infrastructure state analysis and alerting
+  - `infra/modules/operational-excellence/drift_detection.py`
 - **IAM Roles & Policies**: Least-privilege drift detection permissions
   - `infra/modules/operational-excellence/main.tf` lines 425-475
 
@@ -326,13 +326,15 @@ resource "aws_api_gateway_method" "contact_post" {
 - **Component RTO**: 60 seconds for API failover
 
 **6. Automated Disaster Recovery**
-- **Automated Failover Components**:
-  - CloudFront origin groups (website failover)
-  - Route53 health checks + DNS failover (API)
-  - DMS continuous replication (database)
-  - CloudWatch monitoring and SNS notifications
+- **Automated Failover Mechanisms**:
+  - **CloudFront Origin Groups**: Automatic website failover between S3 regions (10-30s)
+  - **Route53 Health Checks + DNS Failover**: Automatic API failover (60s)
+  - **AWS DMS**: Continuous database replication with Change Data Capture (CDC)
+  - **Standby RDS**: Independent writable database (no promotion needed)
+  - **CloudWatch + SNS**: Real-time monitoring and alerting
 - **Overall RTO Target**: 4 hours for complete failover
 - **Overall RPO Target**: 1 hour
+- **Implementation**: Native AWS services (CloudFront, Route53, DMS) - no custom orchestration Lambda needed
 
 **Architecture Diagram:**
 ![Architecture Diagram](./arch-diagram.png)
