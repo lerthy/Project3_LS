@@ -394,6 +394,7 @@ resource "aws_iam_role_policy_attachment" "codebuild_additional_infra_policy" {
   policy_arn = aws_iam_policy.codebuild_additional_infra_policy.arn
 }
 
+
 # Policy 4: Configuration and monitoring services
 resource "aws_iam_role_policy" "codebuild_config_policy" {
   name = "codebuild-config-permissions"
