@@ -134,6 +134,10 @@ phases:
           export SNS_TOPIC_ARN="${SNS_TOPIC_ARN:-}"
           export RDS_ENDPOINT="${RDS_ENDPOINT:-}"
           export ROUTE53_RECORD="${ROUTE53_RECORD:-}"
+          export API_GATEWAY_URL="${API_GATEWAY_URL:-}"
+          export LAMBDA_FUNCTION="${LAMBDA_FUNCTION:-}"
+          export S3_BUCKET="${S3_BUCKET:-}"
+          export CLOUDFRONT_ID="${CLOUDFRONT_ID:-}"
           
           # Run enhanced health check script with rollback integration
           if ./scripts/enhanced-health-check.sh; then
