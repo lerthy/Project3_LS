@@ -1,0 +1,91 @@
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "development"
+}
+
+variable "replication_role_arn" {
+  description = "ARN of the IAM role for S3 replication"
+  type        = string
+  default     = ""
+}
+variable "standby_region" {
+  description = "AWS region for standby resources"
+  type        = string
+  default     = "us-west-2"
+}
+variable "db_name" {
+  description = "Postgres database name to create/use"
+  type        = string
+  default     = "contacts"
+}
+
+variable "db_username" {
+  description = "Database username. Avoid reserved names like 'postgres' or 'admin'"
+  type        = string
+  default     = "appuser"
+}
+
+variable "db_password" {
+  description = "Database password for PostgreSQL database"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "aws_region" {
+  description = "AWS region to deploy resources into"
+  type        = string
+  default     = "eu-north-1"
+
+  validation {
+    condition     = var.aws_region == "eu-north-1"
+    error_message = "project4 branch is locked to eu-north-1. Override only if you intentionally migrate regions."
+  }
+}
+
+variable "primary_availability_zones" {
+  description = "List of availability zones in the primary region"
+  type        = list(string)
+  default     = ["eu-north-1a", "eu-north-1b", "eu-north-1c"]
+}
+
+variable "standby_availability_zones" {
+  description = "List of availability zones in the standby region"
+  type        = list(string)
+  default     = ["us-west-2a", "us-west-2b", "us-west-2c"]
+}
+
+
+
+variable "codestar_connection_arn" {
+  description = "ARN of the CodeStar (CodeConnections) connection to GitHub"
+  type        = string
+  default     = ""
+}
+
+variable "github_webhook_secret" {
+  description = "GitHub webhook secret for pipeline triggers"
+  type        = string
+  sensitive   = true
+  default     = "your-webhook-secret-here"
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for DNS failover (optional)"
+  type        = string
+  default     = ""
+}
+
+# Operational Excellence Variables
+variable "notification_email" {
+  description = "Email address for operational notifications (CI/CD failures, alerts)"
+  type        = string
+  default     = ""
+}
+
+variable "approval_email" {
+  description = "Email address for manual approval notifications"
+  type        = string
+  default     = ""
+}

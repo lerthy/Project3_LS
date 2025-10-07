@@ -1,0 +1,67 @@
+{
+  "TargetMetadata": {
+    "TargetSchema": "public",
+    "SupportLobs": true,
+    "FullLobMode": true,
+    "LobChunkSize": 64,
+    "LimitedSizeLobMode": false,
+    "LobMaxSize": 0,
+    "InlineLobMaxSize": 0,
+    "LoadMaxFileSize": 0,
+    "ParallelLoadThreads": 0,
+    "ParallelLoadBufferSize": 0,
+    "BatchApplyEnabled": false,
+    "TaskRecoveryTableEnabled": false
+  },
+  "FullLoadSettings": {
+    "TargetTablePrepMode": "DROP_AND_CREATE",
+    "CreatePkAfterFullLoad": false,
+    "StopTaskCachedChangesApplied": false,
+    "StopTaskCachedChangesNotApplied": false,
+    "MaxFullLoadSubTasks": 8,
+    "TransactionConsistencyTimeout": 600,
+    "CommitRate": 10000
+  },
+  "Logging": {
+    "EnableLogging": true
+  },
+  "ControlTablesSettings": {
+    "ControlSchema": "dms_control"
+  },
+  "StreamBufferSettings": {
+    "StreamBufferCount": 3,
+    "StreamBufferSizeInMB": 8,
+    "CtrlStreamBufferSizeInMB": 5
+  },
+  "ChangeProcessingDdlHandlingPolicy": {
+    "HandleSourceTableDropped": true,
+    "HandleSourceTableTruncated": true,
+    "HandleSourceTableAltered": true
+  },
+  "ErrorBehavior": {
+    "DataErrorPolicy": "LOG_ERROR",
+    "DataTruncationErrorPolicy": "LOG_ERROR",
+    "DataErrorEscalationPolicy": "SUSPEND_TABLE",
+    "DataErrorEscalationCount": 50,
+    "TableErrorPolicy": "SUSPEND_TABLE",
+    "TableErrorEscalationPolicy": "STOP_TASK",
+    "TableErrorEscalationCount": 50,
+    "RecoverableErrorCount": -1,
+    "RecoverableErrorInterval": 5,
+    "RecoverableErrorThrottling": true,
+    "RecoverableErrorThrottlingMax": 1800,
+    "ApplyErrorDeletePolicy": "IGNORE_RECORD",
+    "ApplyErrorInsertPolicy": "LOG_ERROR",
+    "ApplyErrorUpdatePolicy": "LOG_ERROR",
+    "ApplyErrorEscalationPolicy": "LOG_ERROR",
+    "ApplyErrorEscalationCount": 50,
+    "ApplyErrorFailOnTruncationDdl": false,
+    "FullLoadIgnoreConflicts": true,
+    "FailOnTransactionConsistencyBreached": false,
+    "FailOnNoTablesCaptured": false
+  },
+  "ChangeProcessingPolicy": {
+    "FailOnError": true,
+    "FailOnNoTablesCaptured": false
+  }
+}

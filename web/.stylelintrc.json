@@ -1,0 +1,13 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "ignoreFiles": [
+    "coverage/**",
+    "node_modules/**",
+    "static/assets/**",
+    "static/style.css"
+  ],
+  "rules": {
+    "indentation": 2,
+    "string-quotes": "double"
+  }
+}
