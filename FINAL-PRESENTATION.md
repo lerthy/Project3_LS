@@ -298,7 +298,6 @@ This warm standby approach was chosen because:
 3. **Automated Failover**: CloudFront and Route53 automatically redirect traffic without manual intervention
 4. **Cost-Effective**: More economical than active-active while still meeting our 4-hour RTO requirement
 5. **Compliance**: Satisfies enterprise disaster recovery standards for business continuity
-
 **1. Cross-Region Warm Standby Architecture**
 - **Standby Region**: us-west-2 deployment
   - `infra/modules/rds-standby/` - Standby RDS instance
@@ -621,7 +620,6 @@ We strategically selected these regions for optimal sustainability:
 - **AWS Sustainability Hub**: Oregon hosts AWS's most sustainable data center operations
 
 This regional strategy reduces our carbon footprint by **40-50%** compared to regions with fossil fuel-dependent energy grids, aligning with our sustainability goals while maintaining performance and compliance requirements.
-
 **1. Compute Efficiency**
 - **Serverless-First**: Lambda auto-scales to zero when idle
 - **Right-Sizing**: Environment-based instance sizing
