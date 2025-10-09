@@ -63,11 +63,6 @@ Terraform modules automatically create these parameters from their outputs:
 - `/rds/db_password` (SecureString) - Database password
 - `/rds/db_name` - Database name
 
-#### **Validation**
-Use the included script to validate all parameters:
-```bash
-./validate-ssm-parameters.sh
-```
 
 ### CI/CD Pipelines
 
@@ -89,7 +84,7 @@ Trigger: push to `develop` branch (configure your CI to watch this branch).
 
 ### Required CI Environment Variables
 
-**No environment variables are required!** 🎉
+**No environment variables are required!** 
 
 The pipelines now automatically retrieve all required values from SSM Parameter Store:
 
@@ -104,7 +99,7 @@ For Terraform pipeline, ensure your build role has permissions for S3, CF, APIGW
 
 ### Local Development
 
-Frontend:
+web:
 
 ```
 cd web
@@ -113,7 +108,7 @@ npm run lint
 npm run test
 ```
 
-Lambda:
+web/lambda:
 
 ```
 cd web/lambda
@@ -122,7 +117,7 @@ npm run lint
 npm test
 ```
 
-Terraform (dry run):
+infra:
 
 ```
 cd infra
